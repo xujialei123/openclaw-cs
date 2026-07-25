@@ -1,0 +1,126 @@
+{
+  "version": 2,
+  "_comments": {
+    "purpose": "客服巡检运行时配置。路径可用相对项目根或 ${ENV}；中台地址优先被 .env 的 RAG_BASE_URL 覆盖。",
+    "preferUnread": "true 时先处理会话列表里带未读角标的白名单顾客，并切换到该会话再回复。",
+    "platforms.*.enabled": "该平台是否自动监听/巡检；可在配置页分别开关美团/抖音。",
+    "platforms.*.autoSend": "该平台是否自动发出回复；false 时只写 pending。全局 autoSend=false 仍会全关。",
+    "whitelistOnly": "false=默认可回所有人（通常再按 onlyActionable 筛未读/待回）。true=只回白名单；全局 true 时平台不得放宽。白名单留空且本项 false=全量。",
+    "knowledge.mode": "remote=企业主路径（中台 rag-service）；local=仅联调文件 Hybrid。",
+    "knowledge.rag": "中台 baseUrl/apiKey/kbIds；联调默认本机 8787，生产改 .env 即可。",
+    "knowledge.fallbackLocal": "remote 失败是否降级本地文件；生产示例见 cs-runtime.prod.example.json（false）。",
+    "deploy": "最终交付：边端零库，只连远程中台。见 docs/deploy.md。"
+  },
+  "cdpUrl": "http://127.0.0.1:18800",
+  "gateway": {
+    "baseUrl": "http://127.0.0.1:18789",
+    "tokenFile": "${OPENCLAW_PORTABLE_ROOT}/data/.openclaw/gateway-token.txt",
+    "useLlm": true,
+    "model": "openclaw"
+  },
+  "pollIntervalMs": 5000,
+  "autoSend": true,
+  "preferUnread": true,
+  "onlyActionable": true,
+  "whitelistOnly": false,
+  "maxTargetsPerTick": 8,
+  "_actionComments": "onlyActionable：有未读/待回复才进。whitelistOnly=false 且白名单空=回所有人；填白名单并开 whitelistOnly 才灰度。",
+  "waitAfterSendMs": 1200,
+  "waitBeforeSwitchTabMs": 600,
+  "platforms": {
+    "meituan": {
+      "enabled": true,
+      "autoSend": true,
+      "tabTitle": "经营宝聊天页",
+      "urlIncludes": "g.dianping.com/dzim-main-pc",
+      "openUrl": "https://g.dianping.com/dzim-main-pc/index.html#/",
+      "preferUnread": true,
+      "whitelistOnly": false
+    },
+    "douyin": {
+      "enabled": true,
+      "autoSend": true,
+      "tabTitle": "聊天窗口",
+      "urlIncludes": "life.douyin.com/cs/web",
+      "openUrl": "https://life.douyin.com/cs/web",
+      "homeUrl": "https://life.douyin.com/p/home",
+      "_urlComment": "不要写死 accountId。完整客服台地址由登录后点「顾客咨询」得到，并缓存在 memory/cs-watch-state.json 的 douyinWorkbenchUrl。",
+      "preferUnread": true,
+      "whitelistOnly": false
+    }
+  },
+  "whitelist": {
+    "meituan": [],
+    "douyin": []
+  },
+  "knowledge": {
+    "enabled": true,
+    "mode": "remote",
+    "fallbackLocal": true,
+    "root": "knowledge",
+    "adminPort": 18790,
+    "rag": {
+      "baseUrl": "http://127.0.0.1:8787",
+      "apiKey": "local-dev-key",
+      "kbIds": []
+    },
+    "limit": 3,
+    "minScore": 0.28,
+    "preferKbAnswer": true,
+    "onMiss": "clarify",
+    "_onMissComment": "chat=闲聊可走 LLM，但事实题未命中禁止编造；clarify=旧澄清模板；escalate=升级；fallback=仅规则。",
+    "weights": {
+      "vector": 0.55,
+      "keyword": 0.45,
+      "wiki": 0.1
+    },
+    "wiki": {
+      "enabled": true,
+      "useLlm": false,
+      "autoCardsFromRaw": true,
+      "boost": 0.1,
+      "maxPages": 80,
+      "maxCardsPerDoc": 20
+    },
+    "embedding": {
+      "enabled": true,
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKey": "",
+      "model": "text-embedding-v4",
+      "dimensions": 1536,
+      "_comment": "仅 knowledge.mode=local 时使用；企业向量在中台。"
+    },
+    "dbPath": "knowledge/db/kb.sqlite",
+    "_dbComment": "仅本地降级缓存；生产向量在中台 Postgres，边端勿当主库。"
+  },
+  "shopPolicyHints": [
+    "可以闲聊；但知识库没有的地址/电话/价格/时效/可洗范围/是否上门等，一律不得编造。",
+    "普通衣鞋默认暂不支持上门取件；三室一厅窗帘可上门取送。",
+    "不确定的退款金额、赔偿、改价必须升级人工，不得擅自承诺。",
+    "查单：顾客发订单号（yl_…）或手机号时走 systems.order 自有系统查询，不得编造状态。",
+    "语气简短礼貌，一次只问一个关键信息。"
+  ],
+  "systems": {
+    "order": {
+      "enabled": true,
+      "channel": "browser",
+      "baseUrl": "https://yl-saas.xiyihangye.com/biz/cxorderlaundry",
+      "urlIncludes": "yl-saas.xiyihangye.com",
+      "pathIncludes": "/biz/cxorderlaundry",
+      "timeoutMs": 28000,
+      "settleMs": 1800,
+      "maxResults": 5,
+      "freeTextKeyword": false,
+      "intentMode": "ai+rules",
+      "intentAi": {
+        "provider": "auto",
+        "model": "qwen-turbo",
+        "timeoutMs": 8000,
+        "_comment": "意图以 AI 为准：AI 判否不再被关键词覆盖；规则仅在 AI 调用失败时兜底。hard 单号/手机仍直通。"
+      },
+      "_comment": "自有洗护 SaaS 全部订单页。查单意图默认 AI；freeTextKeyword=false 禁止把整句问话当订单关键字。"
+    }
+  },
+  "stateFile": "memory/cs-watch-state.json",
+  "logFile": "memory/cs-watch.log"
+}

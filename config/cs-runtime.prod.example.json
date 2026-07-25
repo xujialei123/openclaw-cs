@@ -1,0 +1,81 @@
+{
+    "version": 2,
+    "_comment": "生产边端示例：复制为 cs-runtime.json 或用 --config 指定。无本机库；fallbackLocal=false。中台地址也可用环境变量 RAG_BASE_URL 覆盖。",
+    "cdpUrl": "http://127.0.0.1:18800",
+    "gateway": {
+        "baseUrl": "http://127.0.0.1:18789",
+        "tokenFile": "${OPENCLAW_PORTABLE_ROOT}/data/.openclaw/gateway-token.txt",
+        "useLlm": false,
+        "model": "openclaw"
+    },
+    "pollIntervalMs": 12000,
+    "autoSend": true,
+    "preferUnread": true,
+    "onlyActionable": true,
+    "whitelistOnly": true,
+    "maxTargetsPerTick": 8,
+    "waitAfterSendMs": 2000,
+    "waitBeforeSwitchTabMs": 1200,
+    "platforms": {
+        "meituan": {
+            "enabled": true,
+            "autoSend": true,
+            "tabTitle": "经营宝聊天页",
+            "urlIncludes": "g.dianping.com/dzim-main-pc",
+            "openUrl": "https://g.dianping.com/dzim-main-pc/index.html#/",
+            "preferUnread": true,
+            "whitelistOnly": false
+        },
+        "douyin": {
+            "enabled": true,
+            "autoSend": true,
+            "tabTitle": "聊天窗口",
+            "urlIncludes": "life.douyin.com/cs/web",
+            "openUrl": "https://life.douyin.com/cs/web",
+            "homeUrl": "https://life.douyin.com/p/home",
+            "preferUnread": true,
+            "whitelistOnly": true
+        }
+    },
+    "whitelist": {
+        "meituan": [],
+        "douyin": []
+    },
+    "knowledge": {
+        "enabled": true,
+        "mode": "remote",
+        "fallbackLocal": false,
+        "root": "knowledge",
+        "adminPort": 18790,
+        "rag": {
+            "baseUrl": "https://rag.internal.example.com",
+            "apiKey": "REPLACE_WITH_EDGE_API_KEY",
+            "kbIds": ["REPLACE_KB_ID"],
+            "timeoutMs": 20000,
+            "platform": "meituan",
+            "shopId": "REPLACE_SHOP_ID"
+        },
+        "limit": 3,
+        "minScore": 0.28,
+        "preferKbAnswer": true,
+        "onMiss": "clarify"
+    },
+    "shopPolicyHints": [
+        "不确定的退款金额、赔偿、改价必须升级人工，不得擅自承诺。",
+        "查单走 systems.order（自有 SaaS）；无单号先要订单号，不得编造状态。"
+    ],
+    "systems": {
+        "order": {
+            "enabled": true,
+            "channel": "browser",
+            "baseUrl": "https://yl-saas.xiyihangye.com/biz/cxorderlaundry",
+            "urlIncludes": "yl-saas.xiyihangye.com",
+            "pathIncludes": "/biz/cxorderlaundry",
+            "timeoutMs": 28000,
+            "settleMs": 1800,
+            "maxResults": 3
+        }
+    },
+    "stateFile": "memory/cs-watch-state.json",
+    "logFile": "memory/cs-watch.log"
+}
