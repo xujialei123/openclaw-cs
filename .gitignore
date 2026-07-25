@@ -1,0 +1,47 @@
+# 依赖与构建产物
+node_modules/
+.next/
+apps/console/.next/
+apps/**/node_modules/
+packages/**/node_modules/
+brain/**/node_modules/
+brain/rag-service/dist/
+brain/rag-service/release/
+dist-pack/
+*.tsbuildinfo
+
+# 密钥与本机环境（必须忽略）
+.env
+.env.local
+.env.*.local
+**/.env
+brain/.env
+!.env.example
+!brain/.env.example
+
+# 本地运行时配置（含白名单 / kbIds / 密钥，勿入库）
+config/cs-runtime.json
+
+# 运行时日志 / 锁 / 状态
+memory/*.log
+memory/*.lock
+memory/cs-watch-state.json
+memory/*.json
+!memory/.gitkeep
+
+# 知识库本地缓存与上传（体积大且含业务内容）
+knowledge/index/embeddings.json
+knowledge/db/
+brain/rag-service/uploads/
+
+# 临时探测脚本
+scripts/_probe-*.js
+scripts/scratch/
+scripts/Untitled
+
+# IDE / 系统
+.DS_Store
+Thumbs.db
+.cursor/
+*.swp
+*.swo
