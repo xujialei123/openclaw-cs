@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenClaw 客服 · 知识中台网关</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #0f1419; --bg1: #1a222c; --bg2: #243040; --line: #334155;
+      --text: #e8eef6; --muted: #94a3b8; --accent: #3d9a7a; --accent2: #e8a54b;
+      --danger: #e85d5d; --ok: #4ade80; --radius: 10px;
+      --font: "DM Sans", "Noto Sans SC", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: var(--font); color: var(--text);
+      background:
+        radial-gradient(900px 480px at 10% -10%, #1e3a32 0%, transparent 55%),
+        radial-gradient(700px 400px at 100% 0%, #3a2a14 0%, transparent 50%),
+        var(--bg0);
+    }
+    header {
+      padding: 28px 32px 12px; border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(26,34,44,.95), rgba(26,34,44,.6));
+    }
+    header .brand { font-size: 1.55rem; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+    header .brand span { color: var(--accent); }
+    header p { margin: 8px 0 0; color: var(--muted); font-size: .95rem; }
+    main {
+      display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px;
+      padding: 20px 32px 40px; max-width: 1280px;
+    }
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; padding: 16px; }
+      header { padding: 20px 16px 12px; }
+    }
+    section {
+      background: var(--bg1); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 18px;
+    }
+    section h2 { margin: 0 0 12px; font-size: 1.05rem; }
+    .full { grid-column: 1 / -1; }
+    .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .stat {
+      background: var(--bg2); border: 1px solid var(--line); border-radius: 8px;
+      padding: 10px 12px; min-width: 120px;
+    }
+    .stat b { display: block; font-size: 1.15rem; }
+    .stat small { color: var(--muted); }
+    label { display: block; font-size: .82rem; color: var(--muted); margin: 10px 0 4px; }
+    input, select, textarea {
+      width: 100%; background: var(--bg0); border: 1px solid var(--line);
+      color: var(--text); border-radius: 8px; padding: 9px 11px; font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    button {
+      appearance: none; border: 0; border-radius: 8px; padding: 9px 14px;
+      font: inherit; font-weight: 600; cursor: pointer; background: var(--accent); color: #04140f;
+    }
+    button.secondary { background: var(--bg2); color: var(--text); border: 1px solid var(--line); }
+    button.warn { background: var(--accent2); color: #1a1204; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .drop {
+      border: 1.5px dashed var(--line); border-radius: 10px; padding: 22px;
+      text-align: center; color: var(--muted); background: rgba(15,20,25,.45);
+    }
+    .drop.drag { border-color: var(--accent); color: var(--text); background: rgba(61,154,122,.12); }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 500; }
+    .log {
+      margin-top: 12px; background: #0a0e12; border: 1px solid var(--line);
+      border-radius: 8px; padding: 10px 12px; min-height: 72px; max-height: 200px;
+      overflow: auto; font-family: ui-monospace, Consolas, monospace; font-size: .8rem;
+      white-space: pre-wrap; color: #cbd5e1;
+    }
+    .ok { color: var(--ok); } .err { color: #fca5a5; }
+    .chip {
+      display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .75rem;
+      background: var(--bg2); border: 1px solid var(--line);
+    }
+    .chip.on { border-color: var(--ok); color: var(--ok); }
+    .chip.off { border-color: var(--danger); color: #fca5a5; }
+    a { color: var(--accent2); }
+    .hint { color: var(--muted); font-size: .85rem; margin: 0 0 10px; line-height: 1.45; }
+    .env-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+    @media (max-width: 720px) { .env-grid { grid-template-columns: 1fr; } }
+    .env-field label .tag {
+      margin-left: 6px; font-size: .72rem; color: var(--accent2); font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="topnav" style="padding:0 0 12px;border:0;background:transparent;position:static">
+      <a class="on" href="/" style="color:#04140f;background:var(--accent);border-color:var(--accent);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px">配置台</a>
+      <a href="/guide" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">使用教程</a>
+      <a href="/dev-flow" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">研发流程</a>
+      <a href="/project-map" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">项目全景</a>
+      <a href="/deploy" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">生产交付</a>
+    </nav>
+    <h1 class="brand">OpenClaw <span>知识中台网关</span></h1>
+    <p>企业向量库在骨架 <code>rag-service:8787</code>（Postgres/pgvector + llm-wiki）。本页只做配置与转发，不存生产向量。首次使用请先看 <a href="/guide">使用教程</a>；研发看 <a href="/dev-flow">流程</a>；目录职责看 <a href="/project-map">项目全景</a>；最终交付看 <a href="/deploy">生产部署</a>。</p>
+  </header>
+  <main>
+    <section>
+      <h2>中台状态</h2>
+      <div class="stats" id="stats"></div>
+      <p style="color:var(--muted);font-size:.9rem;margin:0">
+        骨架管理页也可直接用：
+        <a id="ragAdminLink" href="http://127.0.0.1:8787/kb-admin" target="_blank">8787/kb-admin</a>
+      </p>
+      <div class="actions">
+        <button type="button" id="btnRefresh">刷新</button>
+        <button type="button" class="secondary" id="btnCreateKb">创建知识库</button>
+      </div>
+      <div class="log" id="log">就绪。</div>
+    </section>
+
+    <section>
+      <h2>上传并编译（转发 8787）</h2>
+      <div class="drop" id="drop">拖拽 .md / .txt，或点击选择（上传后自动 ingest + compile-brain）</div>
+      <input type="file" id="file" accept=".md,.txt,text/markdown,text/plain" multiple hidden />
+      <label>或粘贴 Markdown</label>
+      <div class="row">
+        <input type="text" id="pasteName" placeholder="faq-示例.md" />
+        <button type="button" class="secondary" id="btnPick">选择文件</button>
+      </div>
+      <textarea id="pasteBody" placeholder="问：……&#10;答：……"></textarea>
+      <div class="actions">
+        <button type="button" id="btnUploadPaste">上传到中台</button>
+      </div>
+    </section>
+
+    <section class="full">
+      <h2>中台文件列表</h2>
+      <div style="overflow:auto;max-height:240px">
+        <table>
+          <thead><tr><th>文件</th><th>状态</th><th>chunks</th><th>id</th></tr></thead>
+          <tbody id="fileRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>检索试跑</h2>
+      <label>顾客问句</label>
+      <input type="text" id="query" placeholder="这个套餐可以洗哪些东西？" />
+      <div class="actions"><button type="button" id="btnSearch">检索</button></div>
+      <div class="log" id="searchOut">—</div>
+    </section>
+
+    <section>
+      <h2>边端运行配置</h2>
+      <p class="hint">监听关 = 该平台本轮不巡检；自动发送关 = 仍可识别/生成回复但只进 pending 不发出。保存后下个 tick 生效，无需重启。</p>
+      <div class="row">
+        <div>
+          <label>美团 · 自动监听</label>
+          <select id="mtListen"><option value="true">开</option><option value="false">关</option></select>
+        </div>
+        <div>
+          <label>美团 · 自动发送</label>
+          <select id="mtAutoSend"><option value="true">开</option><option value="false">关</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>抖音 · 自动监听</label>
+          <select id="dyListen"><option value="true">开</option><option value="false">关</option></select>
+        </div>
+        <div>
+          <label>抖音 · 自动发送</label>
+          <select id="dyAutoSend"><option value="true">开</option><option value="false">关</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>自有系统查单</label>
+          <select id="orderLookup"><option value="true">开</option><option value="false">关</option></select>
+        </div>
+        <div>
+          <label>查单意图模式</label>
+          <select id="orderIntentMode">
+            <option value="ai+rules">AI + 规则兜底</option>
+            <option value="ai">仅 AI</option>
+            <option value="rules">仅规则</option>
+          </select>
+        </div>
+      </div>
+      <label>查单后台 URL（打开并搜索的页面）</label>
+      <input type="text" id="orderBaseUrl" placeholder="https://yl-saas.xiyihangye.com/biz/cxorderlaundry" />
+      <div class="row">
+        <div>
+          <label>urlIncludes（匹配已有标签）</label>
+          <input type="text" id="orderUrlIncludes" placeholder="yl-saas.xiyihangye.com" />
+        </div>
+        <div>
+          <label>pathIncludes</label>
+          <input type="text" id="orderPathIncludes" placeholder="/biz/cxorderlaundry" />
+        </div>
+      </div>
+      <div class="row3">
+        <div>
+          <label>最多返回条数</label>
+          <input type="number" id="orderMaxResults" min="1" max="20" step="1" />
+        </div>
+        <div>
+          <label>自由文本关键字</label>
+          <select id="orderFreeText"><option value="true">开</option><option value="false">关</option></select>
+        </div>
+        <div>
+          <label>AI 提供方</label>
+          <select id="orderAiProvider">
+            <option value="auto">auto</option>
+            <option value="gateway">gateway</option>
+            <option value="openai-compatible">openai-compatible</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>AI 模型（可空）</label>
+          <input type="text" id="orderAiModel" placeholder="qwen-turbo" />
+        </div>
+        <div>
+          <label>查单超时 ms</label>
+          <input type="number" id="orderTimeoutMs" min="5000" step="1000" />
+        </div>
+      </div>
+      <p class="hint">查单配置写入 <code>systems.order</code>，保存后下个 tick 生效（无需重启）。OpenClaw 浏览器需已登录该后台。</p>
+      <div class="row">
+        <div>
+          <label>knowledge.mode</label>
+          <select id="mode">
+            <option value="remote">remote（企业）</option>
+            <option value="local">local（联调降级）</option>
+          </select>
+        </div>
+        <div>
+          <label>fallbackLocal</label>
+          <select id="fallbackLocal"><option value="true">true</option><option value="false">false</option></select>
+        </div>
+      </div>
+      <label>RAG baseUrl</label>
+      <input type="text" id="ragBase" />
+      <div class="row">
+        <div>
+          <label>RAG apiKey</label>
+          <input type="password" id="ragKey" autocomplete="off" />
+        </div>
+        <div>
+          <label>kbIds（逗号分隔）</label>
+          <input type="text" id="kbIds" />
+        </div>
+      </div>
+      <div class="row3">
+        <div>
+          <label>onMiss</label>
+          <select id="onMiss">
+            <option value="clarify">clarify</option>
+            <option value="escalate">escalate</option>
+            <option value="fallback">fallback</option>
+          </select>
+        </div>
+        <div>
+          <label>minScore</label>
+          <input type="number" id="minScore" step="0.01" min="0" max="1" />
+        </div>
+        <div>
+          <label>preferKbAnswer</label>
+          <select id="preferKb"><option value="true">true</option><option value="false">false</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>仅白名单（whitelistOnly）</label>
+          <select id="whitelistOnly">
+            <option value="false">关 · 可回所有人</option>
+            <option value="true">开 · 只回白名单</option>
+          </select>
+        </div>
+        <div>
+          <label>仅未读/待回（onlyActionable）</label>
+          <select id="onlyActionable">
+            <option value="true">开 · 有未读/待回才进</option>
+            <option value="false">关 · 不按未读过滤</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">默认：白名单留空 + 仅白名单=关 → 回复所有有未读/待回的顾客。灰度时填白名单并打开「仅白名单」。</p>
+      <label>美团白名单（逗号分隔，可空）</label>
+      <input type="text" id="wlMeituan" placeholder="留空=不限制昵称" />
+      <label>抖音白名单（逗号分隔，可空）</label>
+      <input type="text" id="wlDouyin" placeholder="留空=不限制昵称" />
+      <div class="actions">
+        <button type="button" id="btnSaveCfg">保存到 cs-runtime.json</button>
+      </div>
+      <div class="actions" style="margin-top:8px">
+        <button type="button" class="warn" id="btnLocalParse">本地解析（降级）</button>
+        <button type="button" class="secondary" id="btnLocalIndex">本地重建索引</button>
+      </div>
+    </section>
+
+    <section class="full">
+      <h2>环境变量（.env）</h2>
+      <p class="hint" id="envNote">可在此改边端 / 中台常用变量；密钥字段不回传明文，留空=不修改。保存后需重启 Start-All（及 rag-service）才完全生效。</p>
+      <div class="row" style="align-items:start">
+        <div>
+          <h3 style="margin:0 0 8px;font-size:.95rem;color:var(--muted)">边端 · 根目录 .env</h3>
+          <p class="hint" id="edgeEnvPath" style="margin-bottom:8px"></p>
+          <div class="env-grid" id="edgeEnvFields"></div>
+        </div>
+        <div>
+          <h3 style="margin:0 0 8px;font-size:.95rem;color:var(--muted)">中台 · brain/.env</h3>
+          <p class="hint" id="brainEnvPath" style="margin-bottom:8px"></p>
+          <div class="env-grid" id="brainEnvFields"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="btnSaveEnv">保存环境变量</button>
+        <button type="button" class="secondary" id="btnReloadEnv">重新加载</button>
+      </div>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const logEl = $("log");
+    function log(msg, cls) {
+      const line = document.createElement("div");
+      if (cls) line.className = cls;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.prepend(line);
+    }
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+    }
+    async function api(path, opts = {}) {
+      const res = await fetch(path, {
+        headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+        ...opts,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText || "request failed");
+      return data;
+    }
+    const EDGE_ENV_META = [
+      { key: "DEPLOY_ROLE", select: ["all", "edge"] },
+      { key: "OPENCLAW_PORTABLE_ROOT" },
+      { key: "BRAIN_ROOT" },
+      { key: "ADMIN_PORT" },
+      { key: "OPENCLAW_GATEWAY_URL" },
+      { key: "OPENCLAW_CDP_URL" },
+      { key: "RAG_BASE_URL" },
+      { key: "RAG_API_KEY", secret: true },
+    ];
+    const BRAIN_ENV_META = [
+      { key: "DATABASE_URL", secret: true },
+      { key: "REDIS_URL" },
+      { key: "RAG_SERVICE_PORT" },
+      { key: "RAG_API_KEY", secret: true },
+      { key: "VECTOR_STORE" },
+      { key: "VECTOR_DIM" },
+      { key: "EMBEDDING_PROVIDER" },
+      { key: "EMBEDDING_BASE_URL" },
+      { key: "EMBEDDING_API_KEY", secret: true },
+      { key: "EMBEDDING_MODEL" },
+      { key: "EMBEDDING_DIM" },
+    ];
+    function renderEnvFields(containerId, meta, data) {
+      const el = $(containerId);
+      el.innerHTML = meta.map((m) => {
+        const d = (data && data[m.key]) || {};
+        const setTag = d.set ? `<span class="tag">已设置</span>` : "";
+        const ph = m.secret
+          ? (d.set ? "已设置，留空不改" : "未设置")
+          : "";
+        if (m.select) {
+          const opts = m.select.map((v) =>
+            `<option value="${v}"${d.value === v ? " selected" : ""}>${v}</option>`
+          ).join("");
+          return `<div class="env-field"><label>${m.key}${setTag}</label><select id="env_${m.key}">${opts}</select></div>`;
+        }
+        const type = m.secret ? "password" : "text";
+        const val = m.secret ? "" : escapeHtml(d.value || "");
+        return `<div class="env-field"><label>${m.key}${setTag}</label><input type="${type}" id="env_${m.key}" value="${val}" placeholder="${ph}" autocomplete="off" /></div>`;
+      }).join("");
+    }
+    function collectEnvPatch(meta) {
+      const out = {};
+      for (const m of meta) {
+        const node = $("env_" + m.key);
+        if (!node) continue;
+        out[m.key] = node.value;
+      }
+      return out;
+    }
+    async function loadEnv() {
+      const e = await api("/api/env");
+      if (e.note) $("envNote").textContent = e.note;
+      $("edgeEnvPath").textContent = e.edgePath || "";
+      $("brainEnvPath").textContent = e.brainPath || "";
+      renderEnvFields("edgeEnvFields", EDGE_ENV_META, e.edge);
+      renderEnvFields("brainEnvFields", BRAIN_ENV_META, e.brain);
+    }
+    async function refresh() {
+      const s = await api("/api/status");
+      const online = s.ragOnline;
+      const p = s.config?.platforms || {};
+      const mtL = p.meituan?.enabled !== false;
+      const dyL = p.douyin?.enabled !== false;
+      const mtS = p.meituan?.autoSend !== false;
+      const dyS = p.douyin?.autoSend !== false;
+      $("stats").innerHTML = [
+        ["中台", online ? "在线" : "离线"],
+        ["mode", s.mode],
+        ["美团", `${mtL ? "监听" : "停听"}/${mtS ? "发送" : "不发"}`],
+        ["抖音", `${dyL ? "监听" : "停听"}/${dyS ? "发送" : "不发"}`],
+        ["知识库数", (s.knowledgeBases || []).length],
+        ["默认 kb", (s.config?.knowledge?.rag?.kbIds || [])[0] || "—"],
+      ].map(([k, v]) => `<div class="stat"><b>${escapeHtml(String(v))}</b><small>${k}</small></div>`).join("");
+      if (s.ragBaseUrl) {
+        $("ragAdminLink").href = s.ragBaseUrl.replace(/\/$/, "") + "/kb-admin";
+      }
+      if (!online) log("8787 未就绪：企业上传/向量检索不可用，可开 fallbackLocal 或先启动骨架 rag-service", "err");
+      else if (s.ragError) log(s.ragError, "err");
+
+      const files = await api("/api/files").catch(() => ({ files: [] }));
+      $("fileRows").innerHTML = (files.files || []).map((f) => `
+        <tr>
+          <td>${escapeHtml(f.fileName)}</td>
+          <td><span class="chip">${escapeHtml(f.parseStatus || "")}</span></td>
+          <td>${f.chunkCount ?? "—"}</td>
+          <td style="font-size:.75rem;color:var(--muted)">${escapeHtml(f.id || "")}</td>
+        </tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">暂无文件（先上传或创建知识库）</td></tr>`;
+
+      const kb = s.config?.knowledge || {};
+      const rag = kb.rag || {};
+      $("mode").value = kb.mode || "remote";
+      $("fallbackLocal").value = String(kb.fallbackLocal !== false);
+      $("ragBase").value = rag.baseUrl || "http://127.0.0.1:8787";
+      $("ragKey").value = rag.apiKey || "";
+      $("kbIds").value = (rag.kbIds || []).join(", ");
+      $("onMiss").value = kb.onMiss || "clarify";
+      $("minScore").value = kb.minScore ?? 0.28;
+      $("preferKb").value = String(kb.preferKbAnswer !== false);
+      $("whitelistOnly").value = String(s.config?.whitelistOnly === true);
+      $("onlyActionable").value = String(s.config?.onlyActionable !== false);
+      $("wlMeituan").value = (s.config?.whitelist?.meituan || []).join(", ");
+      $("wlDouyin").value = (s.config?.whitelist?.douyin || []).join(", ");
+      const plat = s.config?.platforms || {};
+      $("mtListen").value = String(plat.meituan?.enabled !== false);
+      $("mtAutoSend").value = String(plat.meituan?.autoSend !== false);
+      $("dyListen").value = String(plat.douyin?.enabled !== false);
+      $("dyAutoSend").value = String(plat.douyin?.autoSend !== false);
+      $("orderLookup").value = String(s.config?.systems?.order?.enabled === true);
+      const ord = s.config?.systems?.order || {};
+      $("orderIntentMode").value = ord.intentMode || "ai+rules";
+      $("orderBaseUrl").value = ord.baseUrl || "";
+      $("orderUrlIncludes").value = ord.urlIncludes || "";
+      $("orderPathIncludes").value = ord.pathIncludes || "";
+      $("orderMaxResults").value = ord.maxResults ?? 5;
+      $("orderFreeText").value = String(ord.freeTextKeyword !== false);
+      $("orderAiProvider").value = ord.intentAi?.provider || "auto";
+      $("orderAiModel").value = ord.intentAi?.model || "";
+      $("orderTimeoutMs").value = ord.timeoutMs ?? 28000;
+    }
+    async function uploadFiles(files) {
+      for (const f of files) {
+        const text = await f.text();
+        const r = await api("/api/upload", {
+          method: "POST",
+          body: JSON.stringify({ filename: f.name, content: text, compile: true }),
+        });
+        log(`上传 ${f.name} → kb=${r.kbId || "local"} file=${r.fileId || "-"} compile=${r.compile?.status || r.mode}`, "ok");
+      }
+      refresh();
+    }
+    $("btnPick").onclick = () => $("file").click();
+    $("drop").onclick = () => $("file").click();
+    $("file").onchange = () => uploadFiles([...$("file").files]);
+    ["dragenter","dragover"].forEach((ev) => $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.add("drag"); }));
+    ["dragleave","drop"].forEach((ev) => $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.remove("drag"); }));
+    $("drop").addEventListener("drop", (e) => uploadFiles([...e.dataTransfer.files]));
+
+    $("btnUploadPaste").onclick = async () => {
+      try {
+        let name = ($("pasteName").value || "").trim() || ("paste-" + Date.now() + ".md");
+        if (!/\.(md|txt)$/i.test(name)) name += ".md";
+        const content = $("pasteBody").value || "";
+        if (!content.trim()) throw new Error("内容为空");
+        const r = await api("/api/upload", { method: "POST", body: JSON.stringify({ filename: name, content, compile: true }) });
+        log(`上传 ${name} ok kb=${r.kbId || r.mode}`, "ok");
+        $("pasteBody").value = "";
+        refresh();
+      } catch (e) { log(e.message, "err"); }
+    };
+
+    $("btnRefresh").onclick = () => refresh().catch((e) => log(e.message, "err"));
+    $("btnCreateKb").onclick = async () => {
+      try {
+        const r = await api("/api/kb/create", { method: "POST", body: JSON.stringify({ name: "OpenClaw 门店知识库" }) });
+        log("已创建知识库 " + r.kbId, "ok");
+        refresh();
+      } catch (e) { log(e.message, "err"); }
+    };
+    $("btnSearch").onclick = async () => {
+      try {
+        const q = $("query").value.trim();
+        if (!q) throw new Error("请输入问句");
+        const r = await api("/api/search?q=" + encodeURIComponent(q));
+        if (!r.hits?.length) {
+          $("searchOut").textContent = "KB_MISS mode=" + (r.meta?.mode || "") + " " + (r.meta?.error || "");
+          return;
+        }
+        $("searchOut").textContent = `# mode=${r.meta?.mode}\n` + r.hits.map((h) =>
+          `KB_HIT score=${Number(h.score).toFixed(3)} source=${h.source}\n${h.answer}`
+        ).join("\n---\n");
+      } catch (e) { $("searchOut").textContent = e.message; }
+    };
+    $("btnSaveCfg").onclick = async () => {
+      try {
+        await api("/api/config", {
+          method: "PUT",
+          body: JSON.stringify({
+            knowledge: {
+              mode: $("mode").value,
+              fallbackLocal: $("fallbackLocal").value === "true",
+              onMiss: $("onMiss").value,
+              minScore: Number($("minScore").value),
+              preferKbAnswer: $("preferKb").value === "true",
+              rag: {
+                baseUrl: $("ragBase").value.trim(),
+                apiKey: $("ragKey").value,
+                kbIds: $("kbIds").value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+              },
+            },
+            whitelistOnly: $("whitelistOnly").value === "true",
+            onlyActionable: $("onlyActionable").value === "true",
+            whitelist: {
+              meituan: $("wlMeituan").value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+              douyin: $("wlDouyin").value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+            },
+            platforms: {
+              meituan: {
+                enabled: $("mtListen").value === "true",
+                autoSend: $("mtAutoSend").value === "true",
+              },
+              douyin: {
+                enabled: $("dyListen").value === "true",
+                autoSend: $("dyAutoSend").value === "true",
+              },
+            },
+            systems: {
+              order: {
+                enabled: $("orderLookup").value === "true",
+                intentMode: $("orderIntentMode").value,
+                baseUrl: $("orderBaseUrl").value.trim(),
+                urlIncludes: $("orderUrlIncludes").value.trim(),
+                pathIncludes: $("orderPathIncludes").value.trim(),
+                maxResults: Number($("orderMaxResults").value) || 5,
+                freeTextKeyword: $("orderFreeText").value === "true",
+                timeoutMs: Number($("orderTimeoutMs").value) || 28000,
+                intentAi: {
+                  provider: $("orderAiProvider").value,
+                  model: $("orderAiModel").value.trim(),
+                },
+              },
+            },
+          }),
+        });
+        log("配置已保存（监听/发送/查单下个 tick 生效）", "ok");
+      } catch (e) { log(e.message, "err"); }
+    };
+    $("btnLocalParse").onclick = async () => {
+      try {
+        const r = await api("/api/local/parse", { method: "POST", body: "{}" });
+        log(`本地解析 pages=${r.pageCount}`, "ok");
+      } catch (e) { log(e.message, "err"); }
+    };
+    $("btnLocalIndex").onclick = async () => {
+      try {
+        const r = await api("/api/local/reindex", { method: "POST", body: "{}" });
+        log(`本地索引 cards=${r.cardCount} provider=${r.provider}`, "ok");
+      } catch (e) { log(e.message, "err"); }
+    };
+    $("btnReloadEnv").onclick = () => loadEnv().catch((e) => log(e.message, "err"));
+    $("btnSaveEnv").onclick = async () => {
+      try {
+        const r = await api("/api/env", {
+          method: "PUT",
+          body: JSON.stringify({
+            edge: collectEnvPatch(EDGE_ENV_META),
+            brain: collectEnvPatch(BRAIN_ENV_META),
+          }),
+        });
+        log("环境变量已保存" + (r.restartedHint ? "（需重启进程）" : ""), "ok");
+        await loadEnv();
+        await refresh();
+      } catch (e) { log(e.message, "err"); }
+    };
+    Promise.all([refresh(), loadEnv()]).catch((e) => log(e.message, "err"));
+  </script>
+</body>
+</html>

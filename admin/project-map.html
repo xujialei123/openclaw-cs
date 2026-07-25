@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>项目全景 · OpenClaw CS</title>
+  <link rel="stylesheet" href="/docs.css" />
+  <style>
+    .doc { max-width: 1100px; }
+    .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+    .toc a {
+      font-size: 0.85rem; padding: 5px 10px; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--muted); text-decoration: none;
+    }
+    .toc a:hover { color: var(--text); border-color: var(--accent); }
+    .flow {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.8rem; line-height: 1.45;
+      background: var(--code); border: 1px solid var(--line);
+      border-radius: 10px; padding: 14px 16px; overflow-x: auto;
+      white-space: pre; color: #c8d6e5;
+    }
+    .lane {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0;
+    }
+    @media (max-width: 900px) { .lane { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--bg1); border: 1px solid var(--line);
+      border-radius: 10px; padding: 14px 14px 12px;
+    }
+    .card h3 { margin: 0 0 8px; font-size: 1rem; color: var(--accent2); border: 0; padding: 0; }
+    .card p { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); }
+    .card ul { margin: 0; padding-left: 1.1rem; font-size: 0.88rem; }
+    .tag {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 999px; margin-right: 6px;
+      background: rgba(61,154,122,.18); color: var(--accent);
+    }
+    .tag.warn { background: rgba(232,165,75,.15); color: var(--accent2); }
+    .tag.brain { background: rgba(99,140,220,.18); color: #8eb4ff; }
+    .tag.path { background: rgba(180,120,220,.15); color: #c9a0ff; }
+    table.files { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 10px 0 18px; }
+    table.files th, table.files td {
+      border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left;
+    }
+    table.files th { background: rgba(36,48,64,.9); color: var(--muted); font-weight: 600; }
+    table.files code.path {
+      font-family: ui-monospace, Consolas, monospace; font-size: 0.84em; color: #9fd6c0;
+    }
+    table.files tr:hover td { background: rgba(61,154,122,.06); }
+    .note {
+      margin: 12px 0; padding: 10px 14px; border-left: 3px solid var(--accent2);
+      background: rgba(232,165,75,.08); color: var(--muted); font-size: 0.9rem;
+    }
+    .steps { counter-reset: step; list-style: none; padding: 0; margin: 12px 0; }
+    .steps li {
+      counter-increment: step; position: relative;
+      padding: 12px 12px 12px 52px; margin: 0 0 10px;
+      border: 1px solid var(--line); border-radius: 10px; background: var(--bg1);
+    }
+    .steps li::before {
+      content: counter(step); position: absolute; left: 12px; top: 12px;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(61,154,122,.2); color: var(--accent); font-weight: 700; font-size: 0.85rem;
+    }
+    .steps li strong { color: var(--text); }
+    .steps li code { font-size: 0.85em; }
+    .steps .why { display: block; margin-top: 4px; color: var(--muted); font-size: 0.88rem; }
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <a href="/">配置台</a>
+    <a href="/guide">使用教程</a>
+    <a href="/dev-flow">研发流程</a>
+    <a class="on" href="/project-map">项目全景</a>
+    <a href="/deploy">生产交付</a>
+    <a href="http://127.0.0.1:8787/kb-admin" target="_blank" rel="noopener">知识中台</a>
+  </nav>
+
+  <article class="doc">
+    <h1>OpenClaw CS · 项目全景与读代码路线</h1>
+    <p>
+      本页给「熟悉代码」用：先看架构与学习顺序，再按文件职责表对照仓库。
+      操作步骤见 <a href="/guide">/guide</a>；研发同步见 <a href="/dev-flow">/dev-flow</a>；生产拆分见 <a href="/deploy">/deploy</a>。
+    </p>
+
+    <nav class="toc" aria-label="本页目录">
+      <a href="#learn">读代码路线</a>
+      <a href="#arch">架构分层</a>
+      <a href="#boot">启动流程</a>
+      <a href="#tick">客服主链路</a>
+      <a href="#reply">回复决策</a>
+      <a href="#tree">目录地图</a>
+      <a href="#files">文件职责表</a>
+      <a href="#config">配置与状态</a>
+      <a href="#cmds">常用命令</a>
+      <a href="#debug">排障</a>
+    </nav>
+
+    <!-- ========== 学习路线 ========== -->
+    <h2 id="learn">0. 读代码路线（建议顺序）</h2>
+    <p class="note">目标：1 天内能跟完「配置 → Tick → 生成回复 → 发送」全链路，知道改 bug 该动哪一层。</p>
+    <ol class="steps">
+      <li>
+        <strong>定边界</strong> · <code>AGENTS.md</code> + <code>tasks.md</code>§P
+        <span class="why">先搞清红线（不编造事实、白名单、升级人工）和当前冲刺目标，再读实现。</span>
+      </li>
+      <li>
+        <strong>看配置真相</strong> · <code>config/cs-runtime.json</code> + <code>packages/runtime-config/index.js</code>
+        <span class="why">白名单、autoSend、knowledge.mode、systems.order、onMiss 都从这里来；schema 在 runtime-config。</span>
+      </li>
+      <li>
+        <strong>跟一条 Tick</strong> · <code>apps/edge-worker/cs-watch.js</code>（搜 <code>async function tick</code> → <code>processMeituan</code>）
+        <span class="why">核心在这一文件：扫列表 → 进会话 → 气泡待回 → claim → generateReply → send。</span>
+      </li>
+      <li>
+        <strong>跟回复决策</strong> · 同文件搜 <code>generateReply</code>，再读 <code>order-lookup.js</code>、<code>kb-retrieve.js</code>
+        <span class="why">查单 / 知识库 / LLM / 澄清模板的优先级都在这里。</span>
+      </li>
+      <li>
+        <strong>看中台怎么被调用</strong> · <code>brain/rag-service/src/routes/api.ts</code> + <code>rag/hybrid-retriever.ts</code>
+        <span class="why">边端只 HTTP；向量/Hybrid 在 :8787，不在 cs-watch 里直连库。</span>
+      </li>
+      <li>
+        <strong>看配置台怎么改运行时</strong> · <code>apps/console/app/page.js</code> + <code>api/config/route.js</code>
+        <span class="why">UI 写回 cs-runtime；当前本机也可能是 <code>kb-admin-server.js</code> 托管同一套 admin 页。</span>
+      </li>
+      <li>
+        <strong>看启动与产物</strong> · <code>scripts/Start-All.ps1</code> + <code>memory/cs-watch.log</code>
+        <span class="why">联调时日志标签（MEITUAN / KB_HIT / ORDER_LOOKUP）是最好的调试入口。</span>
+      </li>
+    </ol>
+
+    <!-- ========== 架构 ========== -->
+    <h2 id="arch">1. 架构分层（一眼看懂）</h2>
+    <div class="lane">
+      <div class="card">
+        <h3><span class="tag">边端 Edge</span>apps/</h3>
+        <p>坐席机：浏览器巡检、发消息、本地降级检索、查单 Adapter。</p>
+        <ul>
+          <li><code>apps/edge-worker</code> — cs-watch / order / kb</li>
+          <li><code>apps/console</code> — Next 配置台（可选）</li>
+          <li>OpenClaw 橙框浏览器 + CDP</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="tag brain">中台 Brain</span>brain/ + infra/</h3>
+        <p>知识中台：向量库、Hybrid 检索、知识卡编译。边端只 HTTP。</p>
+        <ul>
+          <li><code>brain/rag-service</code> — :8787</li>
+          <li><code>infra/</code> — Postgres/pgvector + Redis</li>
+          <li>生产可独立远程部署</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="tag warn">配置 Config</span>config/ · .env</h3>
+        <p>白名单、平台开关、查单、知识库 mode、autoSend。</p>
+        <ul>
+          <li><code>config/cs-runtime.json</code> — 热读主配置</li>
+          <li>根 <code>.env</code> — 路径 / RAG_BASE_URL</li>
+          <li><code>brain/.env</code> — DB / Embedding 密钥</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow">┌─ Start-All.ps1 ─────────────────────────────────────────────┐
+│  Ensure-Infra → rag-service(:8787) → console 或 kb-admin(:18790) │
+│  → OpenClaw gateway + 浏览器(CDP:~18800) → cs-watch 巡检      │
+└──────────────────────────────────────────────────────────────┘
+          │                              │
+          ▼                              ▼
+   边端 Edge                         中台 Brain
+   cs-watch ──CDP──▶ 美团/抖音 IM      rag-service ──▶ Postgres
+          │                              ▲
+          └── HTTP retrieve ─────────────┘
+          └── CDP ──▶ 自有 SaaS 查单页（systems.order）</div>
+
+    <!-- ========== 启动 ========== -->
+    <h2 id="boot">2. 启动流程（谁先谁后）</h2>
+    <ol>
+      <li><code>scripts/Ensure-Infra.ps1</code> — Docker 起 Postgres/Redis，执行 <code>infra/init-db.sql</code></li>
+      <li>启动 <code>brain/rag-service</code>（健康检查 <code>/health</code>）</li>
+      <li>启动配置台：优先 Next <code>apps/console</code>，失败回退 <code>scripts/kb-admin-server.js</code>（同端口 :18790）</li>
+      <li>启动 OpenClaw gateway + 受控浏览器（CDP 常见 <code>18800</code>）</li>
+      <li>启动 <code>apps/edge-worker/cs-watch.js</code>（单实例锁 <code>memory/cs-watch.lock</code>）</li>
+    </ol>
+    <p class="note">
+      <strong>注意：</strong>只跑 <code>npm run edge</code> 不会起浏览器。日常联调用 <code>npm start</code>。
+      JS 改动需重启 watch（或 <code>npm run edge:dev</code>）；JSON 配置每 tick 热加载。
+    </p>
+
+    <!-- ========== Tick ========== -->
+    <h2 id="tick">3. 客服主链路（每个 Tick）</h2>
+    <div class="flow">tick(cfg, state)
+  ├─ 合并磁盘 state.processed（尊重 _clearedFps，防指纹复活）
+  ├─ processMeituan
+  │    ├─ scan 会话列表（iframe DOM）
+  │    ├─ pickTargets：白名单会话全部纳入（进线后看气泡，不信列表预览）
+  │    ├─ 短 TTL 冷却（刚确认无待回则跳过，有未读/待回复仍进）
+  │    ├─ open 会话 → dismiss 智能推荐 → readThread（左右气泡）
+  │    ├─ listUnreplied：最后一条客服之后的顾客气泡（按时间，最多 5 条）
+  │    ├─ 逐条：claim → generateReply（带近 5 条上下文）→ send → settle
+  │    └─ 若 openWork（claim-race / 发送失败）→ 本轮不切抖音
+  ├─ [可选] waitBeforeSwitchTabMs
+  └─ processDouyin（同构：list / open / 连续未回逐条回 / send）</div>
+
+    <!-- ========== Reply ========== -->
+    <h2 id="reply">4. generateReply 决策顺序</h2>
+    <ol>
+      <li><strong>高风险</strong>（退款/赔偿/差评）→ 升级话术，不自动承诺</li>
+      <li><strong>查单</strong> <code>order-lookup.tryHandle</code>
+        <ul>
+          <li>硬特征：订单号 / 手机号 → 直查</li>
+          <li><strong>AI 判意图</strong>（主路径）；AI 判否不被关键词覆盖</li>
+          <li>AI 失败才规则兜底；FAQ/到店自送不当搜单</li>
+        </ul>
+      </li>
+      <li><strong>门店地址 / 到店</strong>：意图命中后固定检索「门店地址」卡片（禁止 LLM 编地名）</li>
+      <li><strong>知识库</strong> <code>kb-retrieve.retrieve</code>
+        <ul>
+          <li><code>mode=remote</code> → 中台 Hybrid；失败可 <code>fallbackLocal</code></li>
+          <li>命中 + <code>preferKbAnswer</code> → 直发</li>
+          <li>事实题未命中 → 禁止乱编（clarify / onMiss）</li>
+          <li>闲聊 → 可走 LLM（带近 5 条上下文；外发剥离「顾客/客服」标签）</li>
+        </ul>
+      </li>
+    </ol>
+
+    <!-- ========== 目录 ========== -->
+    <h2 id="tree">5. 目录地图</h2>
+    <div class="flow">openclawProject/
+├── apps/
+│   ├── edge-worker/     # 巡检边端（核心业务逻辑）★优先读
+│   └── console/         # Next 配置台 :18790
+├── packages/
+│   └── runtime-config/  # cs-runtime schema 校验
+├── brain/
+│   └── rag-service/     # 知识中台服务 :8787
+├── infra/               # docker-compose + init-db.sql
+├── config/              # cs-runtime.json（运行时）
+├── knowledge/           # 话术源 / 本地降级索引
+├── admin/               # 静态文档页（本页在此）
+├── docs/                # guide / dev-flow / deploy（md 源）
+├── scripts/             # 一键启停 / kb-admin 回退
+├── memory/              # 日志、state、lock
+├── AGENTS.md            # Agent 会话规则
+└── tasks.md             # 冲刺与扩展 backlog</div>
+
+    <!-- ========== 文件表 ========== -->
+    <h2 id="files">6. 文件职责表</h2>
+
+    <h3>6.1 边端巡检 · <span class="tag path">apps/edge-worker</span></h3>
+    <table class="files">
+      <thead><tr><th>文件</th><th>职责</th><th>从哪读起</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code class="path">cs-watch.js</code></td>
+          <td>主循环：CDP、美团/抖音扫列表、开聊、气泡待回、claim、生成回复、发送、state/lock。</td>
+          <td><code>main</code> → <code>tick</code> → <code>processMeituan</code> → <code>generateReply</code></td>
+        </tr>
+        <tr>
+          <td><code class="path">order-lookup.js</code></td>
+          <td>查单 Adapter：AI 意图 → 规则兜底 → CDP 打开 SaaS 订单页 → 解析 → 话术。</td>
+          <td><code>tryHandle</code> / <code>resolveOrderIntent</code></td>
+        </tr>
+        <tr>
+          <td><code class="path">kb-retrieve.js</code></td>
+          <td>知识检索适配：remote HTTP / local 降级；打分过滤。</td>
+          <td><code>retrieve</code></td>
+        </tr>
+        <tr>
+          <td><code class="path">kb-wiki.js</code></td>
+          <td>本地 Wiki / 卡片编译辅助（边端降级）。</td>
+          <td><code>buildWiki</code></td>
+        </tr>
+        <tr>
+          <td><code class="path">kb-index.js</code></td>
+          <td>本地索引构建（embeddings / meta）。</td>
+          <td>勿当企业生产向量库</td>
+        </tr>
+        <tr>
+          <td><code class="path">paths.js</code></td>
+          <td>项目根、knowledge、memory 路径解析。</td>
+          <td>避免写死盘符</td>
+        </tr>
+        <tr>
+          <td><code class="path">lib/embedding.js</code></td>
+          <td>本地 embedding 调用（降级）。</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><code class="path">lib/kb-db.js</code></td>
+          <td>本地 SQLite 知识读写（仅 fallback）。</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>6.2 配置台 · <span class="tag path">apps/console</span></h3>
+    <table class="files">
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><code class="path">app/page.js</code></td><td>配置台 UI：白名单、平台、查单、知识库 mode、保存。</td></tr>
+        <tr><td><code class="path">app/layout.js</code> / <code>globals.css</code></td><td>页面壳与样式。</td></tr>
+        <tr><td><code class="path">app/api/config/route.js</code></td><td>读写 <code>config/cs-runtime.json</code>（经 runtime-config）。</td></tr>
+        <tr><td><code class="path">app/api/status/route.js</code></td><td>运行状态摘要（配置 / RAG ping）。</td></tr>
+        <tr><td><code class="path">app/api/docs/[name]/route.js</code></td><td>提供 <code>docs/*.md</code>。</td></tr>
+        <tr><td><code class="path">app/guide|dev-flow|deploy|project-map/route.js</code></td><td>挂载 <code>admin/*.html</code>。</td></tr>
+        <tr><td><code class="path">lib/admin-static.js</code></td><td>admin 静态文件映射。</td></tr>
+        <tr><td><code class="path">lib/runtime.js</code></td><td>REPO_ROOT、配置路径常量。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.3 共享包 · <span class="tag path">packages/</span></h3>
+    <table class="files">
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><code class="path">packages/runtime-config/index.js</code></td><td>校验/规范化 cs-runtime：白名单、platforms、knowledge、systems.order。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.4 知识中台 · <span class="tag brain">brain/rag-service</span></h3>
+    <table class="files">
+      <thead><tr><th>文件 / 目录</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><code class="path">src/main.ts</code></td><td>服务入口，监听 :8787。</td></tr>
+        <tr><td><code class="path">src/routes/api.ts</code></td><td>HTTP API：retrieve / 健康 / 管理。</td></tr>
+        <tr><td><code class="path">src/routes/admin-page.ts</code></td><td>中台知识库管理页（kb-admin）。</td></tr>
+        <tr><td><code class="path">src/rag/rag-service.ts</code></td><td>RAG 编排入口。</td></tr>
+        <tr><td><code class="path">src/rag/hybrid-retriever.ts</code></td><td>向量 + 关键词 Hybrid 检索。</td></tr>
+        <tr><td><code class="path">src/rag/query-rewrite.ts</code></td><td>查询改写。</td></tr>
+        <tr><td><code class="path">src/rag/intent-classifier.ts</code></td><td>检索侧意图分类。</td></tr>
+        <tr><td><code class="path">src/rag/reranker.ts</code></td><td>重排。</td></tr>
+        <tr><td><code class="path">src/rag/answer-generator.ts</code></td><td>基于命中生成/裁剪回答。</td></tr>
+        <tr><td><code class="path">src/brain/*</code></td><td>文档解析、知识卡、Wiki 编译、缺口检测、同步。</td></tr>
+        <tr><td><code class="path">src/vector-store/*</code></td><td>pgvector / 内存向量抽象。</td></tr>
+        <tr><td><code class="path">src/providers/*</code></td><td>LLM / Embedding 提供方。</td></tr>
+        <tr><td><code class="path">src/config/env.ts</code></td><td>中台环境变量。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.5 基础设施与脚本</h3>
+    <table class="files">
+      <thead><tr><th>文件</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><code class="path">infra/docker-compose.yml</code></td><td>本机联调 Postgres + Redis。</td></tr>
+        <tr><td><code class="path">infra/init-db.sql</code></td><td>RAG / pgvector 表结构。</td></tr>
+        <tr><td><code class="path">scripts/Start-All.ps1</code></td><td>一键：Infra → RAG → Console → OpenClaw → cs-watch。</td></tr>
+        <tr><td><code class="path">scripts/Start-CsWatch.ps1</code></td><td>确保浏览器/CDP 后启动巡检。</td></tr>
+        <tr><td><code class="path">scripts/Stop-All.ps1</code></td><td>停相关进程，清 lock。</td></tr>
+        <tr><td><code class="path">scripts/Ensure-Infra.ps1</code></td><td>Docker pull/up + 建表。</td></tr>
+        <tr><td><code class="path">scripts/run-next-console.js</code></td><td>启动 Next console（dev/build/start）。</td></tr>
+        <tr><td><code class="path">scripts/kb-admin-server.js</code></td><td>静态 admin 回退（含 /project-map、/guide…）。</td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.6 文档、知识、运行时产物</h3>
+    <table class="files">
+      <thead><tr><th>路径</th><th>职责</th></tr></thead>
+      <tbody>
+        <tr><td><code class="path">docs/guide.md</code></td><td>人类使用教程。</td></tr>
+        <tr><td><code class="path">docs/dev-flow.md</code></td><td>研发架构与改动同步清单。</td></tr>
+        <tr><td><code class="path">docs/deploy.md</code></td><td>中台/边端拆分与生产部署。</td></tr>
+        <tr><td><code class="path">admin/*.html</code></td><td>文档浏览器页（含本页）。</td></tr>
+        <tr><td><code class="path">knowledge/raw/</code></td><td>原始政策/FAQ 材料。</td></tr>
+        <tr><td><code class="path">knowledge/cards/</code></td><td>结构化知识卡（对外话术）。</td></tr>
+        <tr><td><code class="path">knowledge/index/</code></td><td>本地降级索引（embeddings/wiki/meta）。</td></tr>
+        <tr><td><code class="path">memory/cs-watch.log</code></td><td>巡检主日志。</td></tr>
+        <tr><td><code class="path">memory/cs-watch-state.json</code></td><td>已处理指纹、quiet、pending。</td></tr>
+        <tr><td><code class="path">memory/cs-watch.lock</code></td><td>单实例锁。</td></tr>
+        <tr><td><code class="path">AGENTS.md</code></td><td>Cursor Agent 规则与红线。</td></tr>
+        <tr><td><code class="path">tasks.md</code></td><td>冲刺 §P、扩展 §7、交付 §9。</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========== 配置 ========== -->
+    <h2 id="config">7. 关键配置与状态</h2>
+    <table class="files">
+      <thead><tr><th>字段 / 文件</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>whitelist.meituan / douyin</code></td><td>可选灰度昵称；留空且 whitelistOnly=false 则不限人。</td></tr>
+        <tr><td><code>whitelistOnly</code></td><td>默认 false=可回所有人；true=只回白名单。</td></tr>
+        <tr><td><code>platforms.*.enabled / autoSend</code></td><td>是否监听、是否真发。</td></tr>
+        <tr><td><code>knowledge.mode</code></td><td><code>remote</code> / <code>local</code>。</td></tr>
+        <tr><td><code>knowledge.onMiss</code></td><td>chat / clarify / escalate / fallback。</td></tr>
+        <tr><td><code>systems.order</code></td><td>查单开关、SaaS URL、intentMode。</td></tr>
+        <tr><td><code>pollIntervalMs</code></td><td>Tick 间隔。</td></tr>
+        <tr><td><code>waitBeforeSwitchTabMs</code></td><td>美团→抖音切 tab 等待；美团 openWork 时跳过抖音。</td></tr>
+        <tr><td><code>memory/cs-watch-state.json</code></td><td>processed 指纹、quiet 冷却、pending 人工队列。</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ========== 命令 ========== -->
+    <h2 id="cmds">8. 常用命令</h2>
+    <table class="files">
+      <thead><tr><th>命令</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td><code>npm start</code></td><td>一键全栈（推荐）。</td></tr>
+        <tr><td><code>npm run start:watch</code></td><td>侧重启动巡检。</td></tr>
+        <tr><td><code>npm run stop</code></td><td>停止相关进程。</td></tr>
+        <tr><td><code>npm run edge</code> / <code>edge:dev</code> / <code>edge:once</code></td><td>仅跑 cs-watch（需 CDP 已就绪）。</td></tr>
+        <tr><td><code>npm run console</code></td><td>仅 Next 配置台。</td></tr>
+        <tr><td><code>npm run admin:legacy</code></td><td>静态 admin（本页依赖它时常开着）。</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="debug">9. 排障速查</h2>
+    <ul>
+      <li><code>/project-map</code> 404 → 确认 :18790 是 console 还是 <code>kb-admin-server</code>；后者需有 project-map 路由。</li>
+      <li>无自动回 + <code>claim-race</code> → 双实例或指纹复活；查 lock / state。</li>
+      <li>政策问被查单 → 看 <code>ORDER_LOOKUP via=</code>。</li>
+      <li><code>ECONNREFUSED :18800</code> → 浏览器/CDP 未起，重跑 <code>npm start</code>。</li>
+      <li><code>KB_REMOTE_FAIL</code> / 地址问澄清 → 中台 :8787 或店址意图未走到「门店地址」检索。</li>
+      <li>改了 JS 不生效 → 重启 watch 或用 <code>edge:dev</code>。</li>
+    </ul>
+
+    <p class="note">
+      文档同步：改架构/链路更新本页 + <code>docs/dev-flow.md</code>；改操作更新 <code>docs/guide.md</code>；改交付更新 <code>docs/deploy.md</code>。
+      未更新文档视为功能未完成（见 AGENTS.md）。
+    </p>
+  </article>
+</body>
+</html>

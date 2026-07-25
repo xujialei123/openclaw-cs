@@ -1,0 +1,16 @@
+{
+  "name": "@openclaw/console",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 18790 -H 127.0.0.1",
+    "build": "next build",
+    "start": "next start -p 18790 -H 127.0.0.1"
+  },
+  "dependencies": {
+    "@openclaw/runtime-config": "*",
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
