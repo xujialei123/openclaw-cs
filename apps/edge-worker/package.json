@@ -1,0 +1,15 @@
+{
+  "name": "@openclaw/edge-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenClaw edge: cs-watch, order-lookup, local kb fallback",
+  "main": "cs-watch.js",
+  "scripts": {
+    "start": "node cs-watch.js",
+    "once": "node cs-watch.js --once",
+    "order": "node order-lookup.js"
+  },
+  "dependencies": {
+    "@openclaw/runtime-config": "*"
+  }
+}
