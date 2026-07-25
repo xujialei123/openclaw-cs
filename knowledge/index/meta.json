@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builtAt": "2026-07-25T06:09:56.236Z",
+  "cardCount": 0,
+  "wikiPageCount": 0,
+  "provider": "openai-compatible",
+  "model": "text-embedding-v4",
+  "dimensions": 1536,
+  "status": "ready",
+  "mode": "hybrid+wiki"
+}

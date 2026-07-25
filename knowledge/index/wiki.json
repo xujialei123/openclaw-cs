@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "builtAt": "2026-07-25T06:09:56.235Z",
+  "mode": "local-rules",
+  "ref": "enterprise-knowledge-llm-wiki + skeleton WikiCompiler",
+  "pageCount": 0,
+  "edgeCount": 0,
+  "generatedCardCount": 0,
+  "pages": [],
+  "edges": []
+}
