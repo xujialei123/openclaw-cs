@@ -12,6 +12,7 @@ param(
   [switch]$SkipRag,
   [switch]$SkipDocker,
   [switch]$Once,
+  [switch]$NoOpenBrowser,
   [string]$Config = "",
   [string]$BrainRoot = ""
 )
@@ -263,8 +264,10 @@ if (-not $SkipAdmin) {
   if (Test-UrlOk "http://127.0.0.1:$adminPort/api/status") {
     Write-Host "  OK  http://127.0.0.1:$adminPort"
     Write-Host "  Guide: http://127.0.0.1:$adminPort/guide"
-    try { Start-Process "http://127.0.0.1:$adminPort/guide" } catch { }
-    try { Start-Process "http://127.0.0.1:$adminPort/" } catch { }
+    if (-not $NoOpenBrowser) {
+      try { Start-Process "http://127.0.0.1:$adminPort/guide" } catch { }
+      try { Start-Process "http://127.0.0.1:$adminPort/" } catch { }
+    }
   } else {
     Write-Warning "  console failed — npm install && npm run console:build  或 npm run admin:legacy"
   }

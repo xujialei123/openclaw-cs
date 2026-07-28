@@ -111,6 +111,7 @@ F:\openclawProject\brain\.env.example → brain\.env
 
 ```powershell
 npm start                 # 推荐：infra + rag + 控制台 + Gateway/浏览器 + cs-watch
+npm run desktop           # 桌面托盘端：启停 Start-All + 内嵌管理台
 npm run start:watch       # 只起 Gateway/浏览器 + 巡检（不开 Docker/rag）
 npm run edge              # 仅巡检进程（需 18800 已就绪）
 npm run edge:dev          # 开发：改 apps/edge-worker 代码自动重启进程
@@ -118,6 +119,8 @@ npm run stop
 # 等价：.\scripts\Start-All.ps1
 # 说明：cs-runtime.json / 白名单每轮热读；改 JS 需 edge:dev 或重启巡检
 ```
+
+桌面端说明见 [`apps/desktop/README.md`](../apps/desktop/README.md)。关闭窗口会进托盘；退出托盘菜单会尝试 `Stop-All`。
 
 启动顺序：
 

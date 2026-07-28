@@ -18,6 +18,7 @@
     "edge:once": "node apps/edge-worker/cs-watch.js --once",
     "edge:dev": "node --watch --watch-path=apps/edge-worker apps/edge-worker/cs-watch.js",
     "wecom": "node apps/wecom-bridge/index.js",
+    "desktop": "npm --prefix apps/desktop start",
     "console": "node scripts/run-next-console.js dev",
     "console:build": "node scripts/run-next-console.js build",
     "console:start": "node scripts/run-next-console.js start",

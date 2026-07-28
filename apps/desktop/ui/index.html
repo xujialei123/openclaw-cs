@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenClaw 客服桌面端</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <div class="brand">
+        <span class="mark"></span>
+        <div>
+          <strong>OpenClaw 客服</strong>
+          <small id="roleHint">本机边端控制台</small>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="btnStart" class="primary">启动服务</button>
+        <button type="button" id="btnStop">停止服务</button>
+        <button type="button" id="btnRefresh">刷新状态</button>
+        <button type="button" id="btnLogs">日志目录</button>
+        <button type="button" id="btnAdmin">浏览器打开</button>
+      </div>
+    </header>
+
+    <section class="status" id="statusRow">
+      <div class="pill" data-k="admin"><span class="dot"></span>管理台</div>
+      <div class="pill" data-k="gateway"><span class="dot"></span>Gateway</div>
+      <div class="pill" data-k="cdp"><span class="dot"></span>浏览器 CDP</div>
+      <div class="pill" data-k="watch"><span class="dot"></span>巡检</div>
+      <div class="pill" data-k="wecom"><span class="dot"></span>企微桥</div>
+    </section>
+
+    <p class="msg" id="msg">正在检测服务…</p>
+
+    <main class="frame-wrap">
+      <iframe id="adminFrame" title="管理台" src="about:blank"></iframe>
+      <div class="empty" id="empty">
+        <h1>服务尚未就绪</h1>
+        <p>点击上方「启动服务」，将调用本仓 Start-All（含 OpenClaw、巡检、企微桥与管理台）。</p>
+        <p class="hint">需已配置 <code>OPENCLAW_PORTABLE_ROOT</code>（默认 <code>F:\OpenClaw-USB-Portable</code>）与 <code>config/cs-runtime.json</code>。</p>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

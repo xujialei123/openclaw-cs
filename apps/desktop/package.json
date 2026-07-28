@@ -1,0 +1,14 @@
+{
+  "name": "@openclaw/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenClaw CS desktop shell (tray + embedded admin console)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^34.5.1"
+  }
+}

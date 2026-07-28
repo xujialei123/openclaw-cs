@@ -39,6 +39,9 @@ scripts/_probe-*.js
 scripts/scratch/
 scripts/Untitled
 
+# Electron 本地下载缓存 zip（体积大）
+memory/electron-*.zip
+
 # IDE / 系统
 .DS_Store
 Thumbs.db
