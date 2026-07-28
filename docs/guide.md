@@ -214,6 +214,28 @@ RAG_API_KEY=...
 
 全局 `autoSend: false` 仍会关掉所有平台发送。保存后下个 tick 生效。
 
+### 企业微信智能机器人（长连接 API）
+
+与美团/抖音浏览器巡检不同：企微走官方 **智能机器人长连接**（`@wecom/aibot-node-sdk`），**私聊与群 @ 共用**现有回复引擎（**自动查单** + 知识库 + LLM）。
+
+1. 企微后台创建智能机器人 → **API 模式** → **使用长连接** → 获取 Bot ID / Secret；授权「消息」等权限；可见范围勾好  
+2. 群设置 → **添加群机器人** → 选该智能机器人（否则群里 @ 不到）  
+3. 本仓 `.env` 填写：
+   ```env
+   WECOM_AIBOT_ID=你的BotID
+   WECOM_AIBOT_SECRET=你的Secret
+   ```
+4. `config/cs-runtime.json` → `platforms.wecom.enabled: true`（查单仍用 `systems.order`，与美团/抖音相同）  
+5. 安装依赖并启动：
+   ```powershell
+   npm install
+   npm run start:wecom
+   ```
+   或 `Start-All`（启用且密钥齐全时会自动起 wecom-bridge）  
+6. 验收：私聊机器人 / 群里 @ 机器人发「查一下订单号…」→ 日志出现 `WECOM` + `ORDER_LOOKUP`  
+
+文档：[智能机器人长连接](https://developer.work.weixin.qq.com/document/path/101463)
+
 ### 自有系统查单（洗护 SaaS）
 
 配置：`config/cs-runtime.json` → `systems.order`，也可在配置页动态改（开关、后台 URL、意图模式、条数、AI 等），**保存后下个 tick 生效**。

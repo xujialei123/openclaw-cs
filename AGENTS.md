@@ -61,6 +61,7 @@
 |---|---|---|
 | 美团经营宝 | `g.dianping.com/dzim-main-pc` | 白名单巡检 + 知识库回答 |
 | 抖音来客 | `life.douyin.com/cs/web` | 同上 |
+| 企业微信智能机器人 | `apps/wecom-bridge` 长连接 | 私聊 / 群@ → 同套 generateReply（含查单） |
 
 ### 白名单（测试，非写死）
 

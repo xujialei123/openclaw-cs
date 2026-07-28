@@ -969,7 +969,20 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
         return handled.reply;
       }
     } catch (e) {
-      log(cfg, "ORDER_LOOKUP_FAIL", String(e.message || e).slice(0, 120));
+      const err = String(e.message || e);
+      log(cfg, "ORDER_LOOKUP_FAIL", err.slice(0, 120));
+      // 已有单号/手机时勿再让 LLM 追问手机号；提示通道未就绪
+      if (
+        /yl_[a-zA-Z0-9]{4,}/i.test(msg) ||
+        /订单编号\s*\d{8,}/.test(msg) ||
+        /1[3-9]\d{9}/.test(msg) ||
+        /ECONNREFUSED|cdp|18800|timeout/i.test(err)
+      ) {
+        return (
+          "亲，订单信息我已收到，但查单通道暂时连不上（需 OpenClaw 浏览器在线）。" +
+          "请稍后再试，或把订单截图发我，我帮您转人工核对。"
+        );
+      }
     }
   }
 
@@ -3117,7 +3130,18 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+module.exports = {
+  generateReply,
+  normalizeReplyResult,
+  loadRuntimeConfig,
+  normalizeRuntimeConfig,
+  sanitizeCustomerFacingReply,
+  PROJECT_ROOT,
+};
+
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

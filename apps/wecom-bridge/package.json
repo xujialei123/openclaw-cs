@@ -1,0 +1,15 @@
+{
+  "name": "@openclaw/wecom-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WeCom intelligent bot long-connection bridge → reply-engine (KB + order lookup)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:config": "node index.js --config ../../config/cs-runtime.json"
+  },
+  "dependencies": {
+    "@openclaw/edge-worker": "*",
+    "@wecom/aibot-node-sdk": "^1.0.7"
+  }
+}

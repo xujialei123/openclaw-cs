@@ -48,6 +48,15 @@
       "_urlComment": "不要写死 accountId。完整客服台地址由登录后点「顾客咨询」得到，并缓存在 memory/cs-watch-state.json 的 douyinWorkbenchUrl。",
       "preferUnread": true,
       "whitelistOnly": false
+    },
+    "wecom": {
+      "enabled": false,
+      "_comment": "企业微信智能机器人长连接。密钥优先 .env 的 WECOM_AIBOT_ID / WECOM_AIBOT_SECRET；npm run start:wecom 启动。查单走 systems.order（与美团/抖音同一套）。",
+      "botId": "",
+      "secret": "",
+      "onlyWhenMentionedInGroup": true,
+      "welcomeText": "在的，我是门店智能客服。查订单、问套餐、门店地址都可以直接说；群里请 @ 我再提问。",
+      "replyTimeoutMs": 55000
     }
   },
   "whitelist": {

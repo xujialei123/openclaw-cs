@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   One-click start from THIS repo: infra + brain(rag) + console + OpenClaw + cs-watch
@@ -316,3 +316,30 @@ if (-not $SkipWatch) {
   Write-Host "[4/5] Skip cs-watch"
   Write-Host "Done. Admin: http://127.0.0.1:$adminPort/"
 }
+
+# 企微智能机器人长连接（platforms.wecom.enabled + BotId/Secret）
+try {
+  $rtWecom = Get-Content $Cfg -Raw -Encoding UTF8 | ConvertFrom-Json
+  $wecomOn = $false
+  if ($rtWecom.platforms -and $rtWecom.platforms.wecom) {
+    $wecomOn = [bool]$rtWecom.platforms.wecom.enabled
+  }
+  $hasBot = -not [string]::IsNullOrWhiteSpace($env:WECOM_AIBOT_ID)
+  $hasSec = -not [string]::IsNullOrWhiteSpace($env:WECOM_AIBOT_SECRET)
+  if (-not $hasBot -and $rtWecom.platforms.wecom -and $rtWecom.platforms.wecom.botId) { $hasBot = $true }
+  if (-not $hasSec -and $rtWecom.platforms.wecom -and $rtWecom.platforms.wecom.secret) { $hasSec = $true }
+  if ($wecomOn -and $hasBot -and $hasSec) {
+    Write-Host "[5/5] Starting wecom-bridge..."
+    $StartWecom = Join-Path $Root "scripts\Start-WecomBridge.ps1"
+    if (Test-Path $StartWecom) {
+      if ($Config) { & $StartWecom -Config $Config } else { & $StartWecom }
+    } else {
+      Write-Warning "  Start-WecomBridge.ps1 missing"
+    }
+  } else {
+    Write-Host "[5/5] Skip wecom-bridge (set platforms.wecom.enabled + WECOM_AIBOT_ID/SECRET)"
+  }
+} catch {
+  Write-Warning "  wecom-bridge skip: $($_.Exception.Message)"
+}
+

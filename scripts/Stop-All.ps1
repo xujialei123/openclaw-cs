@@ -53,6 +53,11 @@ if (Test-Path $lock) {
   Write-Host "  removed memory\cs-watch.lock"
 }
 
+Write-Host "[1b] wecom-bridge"
+[void](Stop-ByCommandLine "*wecom-bridge*" "wecom-bridge")
+[void](Stop-ByCommandLine "*apps\\wecom-bridge\\index.js*" "wecom-bridge")
+[void](Stop-ByCommandLine "*apps/wecom-bridge/index.js*" "wecom-bridge")
+
 Write-Host "[2] console / kb-admin"
 [void](Stop-ByCommandLine "*kb-admin-server.js*" "kb-admin")
 [void](Stop-ByCommandLine "*next*18790*" "next-console")
