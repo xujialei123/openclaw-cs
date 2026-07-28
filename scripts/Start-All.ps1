@@ -224,7 +224,8 @@ if (-not $SkipAdmin) {
     $adminErr = Join-Path $LogDir "console-stderr.log"
     $consoleNext = Join-Path $Root "apps\console\.next"
     $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
-    $useNext = ($env:USE_NEXT_CONSOLE -eq "1") -or (Test-Path $consoleNext)
+    # 默认用 legacy kb-admin（含上传/环境变量/分步引导）。显式 USE_NEXT_CONSOLE=1 才用 Next。
+    $useNext = ($env:USE_NEXT_CONSOLE -eq "1") -and (Test-Path $consoleNext)
     $startedConsole = $false
     if ($useNext -and (Test-Path $ConsolePkg) -and (Test-Path (Join-Path $Root "node_modules\next"))) {
       Write-Host "  Using Next console (apps/console) ..."

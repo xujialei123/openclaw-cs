@@ -566,33 +566,86 @@ function askForIdReply() {
   return "亲，我可以帮您查进度。把订单号、下单手机号，或订单名称发我任意一样就行，马上帮您查。";
 }
 
+/** 终态：已完成/取消/退款等——简短确认即可，不必再报金额/类型或提加急 */
+function isTerminalOrderStatus(status) {
+  const s = String(status || "").trim();
+  if (!s) return false;
+  return /已完成|已取消|已关闭|已退款|退款成功|交易关闭|已签收/.test(s);
+}
+
+/** 进行中：突出状态，少堆字段 */
+function isInProgressOrderStatus(status) {
+  const s = String(status || "").trim();
+  if (!s || isTerminalOrderStatus(s)) return false;
+  return /待|清洗|洗涤|烘干|质检|发货|取货|打包|进行中|处理中/.test(s);
+}
+
+/**
+ * 查单结果话术：口语、短、按状态分流。
+ * - 已完成/取消/退款：一句确认 + 需要别的再说（不提加急改约）
+ * - 进行中：状态为主，名称/门店可选带一句
+ * - 多单：只列号+状态+名称，让顾客点选
+ */
 function formatOrdersReply(orders, keyword) {
   if (!orders?.length) {
     return (
-      `亲，用「${keyword}」在系统里没有查到匹配订单。` +
-      "请再核对一下订单号是否完整，或把订单截图发在本对话，我帮您人工核对。"
+      `亲，用「${keyword}」没查到匹配订单。` +
+      "您再核对下订单号，或把订单截图发我，我帮您人工看一下。"
     );
   }
+
   if (orders.length === 1) {
     const o = orders[0];
-    const parts = [
-      `亲，已帮您查到订单 ${o.orderNo || keyword}：`,
-      o.status ? `当前状态：${o.status}` : null,
-      o.name ? `订单名称：${o.name}` : null,
-      o.shop ? `门店：${o.shop}` : null,
-      o.amount ? `订单金额：${o.amount}` : null,
-      o.type ? `类型：${o.type}` : null,
-      "如需加急或改约，跟我说一声即可。",
-    ].filter(Boolean);
-    return parts.join("\n");
+    const no = o.orderNo || keyword;
+    const status = String(o.status || "").trim();
+    const name = String(o.name || "").trim();
+    const shop = String(o.shop || "").trim();
+    const nameBit = name ? `（${name}）` : "";
+
+    if (isTerminalOrderStatus(status)) {
+      if (/已完成|已签收/.test(status)) {
+        return `亲，订单 ${no}${nameBit} 已是「${status}」状态啦。还有别的需要帮您吗？`;
+      }
+      if (/退款|取消|关闭/.test(status)) {
+        return `亲，订单 ${no}${nameBit} 当前是「${status}」。如有疑问跟我说，我帮您转人工看一下。`;
+      }
+      return `亲，订单 ${no}${nameBit} 当前是「${status}」。还有别的需要帮您吗？`;
+    }
+
+    if (isInProgressOrderStatus(status) || status) {
+      const shopBit = shop ? `，门店：${shop}` : "";
+      return (
+        `亲，已查到订单 ${no}${nameBit}，当前进度：${status || "处理中"}${shopBit}。` +
+        "如需加急或改约，跟我说一声就行。"
+      );
+    }
+
+    // 状态读不到时少暴露内部字段，避免像后台报表
+    return (
+      `亲，已查到订单 ${no}${nameBit}` +
+      (shop ? `，门店：${shop}` : "") +
+      "。具体进度我再帮您核对一下，稍等或发张截图也行。"
+    );
   }
-  const lines = orders.slice(0, 3).map((o, i) => {
-    return `${i + 1}. ${o.orderNo || "?"}｜${o.status || "?"}｜${o.name || ""}｜${o.shop || ""}`.trim();
+
+  // 多单：优先展示未完成的；全是终态则仍列出，避免顾客以为没查到
+  const sorted = [...orders].sort((a, b) => {
+    const ta = isTerminalOrderStatus(a.status) ? 1 : 0;
+    const tb = isTerminalOrderStatus(b.status) ? 1 : 0;
+    return ta - tb;
   });
+  const show = sorted.slice(0, 3);
+  const lines = show.map((o, i) => {
+    const bits = [o.orderNo || "?", o.status || "状态未知"];
+    if (o.name) bits.push(o.name);
+    return `${i + 1}. ${bits.join(" · ")}`;
+  });
+  const more = orders.length > 3 ? `\n（还有 ${orders.length - 3} 单未列出）` : "";
   return (
-    `亲，用「${keyword}」查到 ${orders.length} 条相关订单：\n` +
+    `亲，查到 ${orders.length} 条相关订单：\n` +
     lines.join("\n") +
-    "\n请告诉我是哪一单（发完整订单号），我帮您看详细进度。"
+    more +
+    "\n您回复是第几单，或发完整订单号，我帮您看这一单。"
   );
 }
 
@@ -634,7 +687,7 @@ function mapRow(headers, cells) {
     aligned.find((c) => /^yl_/i.test(c)) ||
     "";
   const statusList =
-    /待支付|待清洗|清洗中|待质检|质检中|待发货|已发货|待取货|已完成|已取消|待收货|洗涤中|烘干中|打包中/;
+    /待支付|待清洗|清洗中|待质检|质检中|待发货|已发货|待取货|已完成|已取消|已关闭|已退款|退款成功|待收货|洗涤中|烘干中|打包中|已签收/;
   const status =
     pick("订单状态") ||
     aligned.find((c) => statusList.test(c)) ||

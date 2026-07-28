@@ -61,11 +61,48 @@
     .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     button {
       appearance: none; border: 0; border-radius: 8px; padding: 9px 14px;
-      font: inherit; font-weight: 600; cursor: pointer; background: var(--accent); color: #04140f;
+      font: inherit; font-weight: 600; cursor: pointer;
+      background: var(--accent); color: #04140f;
+      transition: background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease, box-shadow .15s ease;
     }
-    button.secondary { background: var(--bg2); color: var(--text); border: 1px solid var(--line); }
+    button:hover:not(:disabled) {
+      background: #4cb890;
+      box-shadow: 0 0 0 1px rgba(61,154,122,.35);
+    }
+    button:active:not(:disabled) {
+      background: #348a6c;
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    button:focus-visible {
+      outline: 2px solid var(--accent2);
+      outline-offset: 2px;
+    }
+    button.secondary {
+      background: var(--bg2); color: var(--text); border: 1px solid var(--line);
+    }
+    button.secondary:hover:not(:disabled) {
+      background: #2c3a4c; border-color: #64748b; color: #fff;
+      box-shadow: none;
+    }
+    button.secondary:active:not(:disabled) {
+      background: #1e293b; border-color: var(--accent); transform: translateY(1px);
+    }
     button.warn { background: var(--accent2); color: #1a1204; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.warn:hover:not(:disabled) { background: #f0b85e; box-shadow: none; }
+    button.warn:active:not(:disabled) { background: #d4943a; transform: translateY(1px); }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    #btnOpenWizard {
+      margin-left: 4px; padding: 6px 12px; font-size: .85rem;
+      border-color: var(--accent); color: var(--accent);
+      background: rgba(61,154,122,.12);
+    }
+    #btnOpenWizard:hover:not(:disabled) {
+      background: rgba(61,154,122,.28); border-color: #4cb890; color: #7ddec0;
+    }
+    #btnOpenWizard:active:not(:disabled) {
+      background: rgba(61,154,122,.4); color: #fff; transform: translateY(1px);
+    }
     .drop {
       border: 1.5px dashed var(--line); border-radius: 10px; padding: 22px;
       text-align: center; color: var(--muted); background: rgba(15,20,25,.45);
@@ -94,6 +131,47 @@
     .env-field label .tag {
       margin-left: 6px; font-size: .72rem; color: var(--accent2); font-weight: 500;
     }
+    /* —— 首次分步引导 —— */
+    .wiz-backdrop {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(8, 12, 16, .72);
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .wiz-backdrop.open { display: flex; }
+    .wiz {
+      width: min(560px, 100%); background: var(--bg1); border: 1px solid var(--line);
+      border-radius: 12px; padding: 22px 24px 18px; box-shadow: 0 16px 48px rgba(0,0,0,.45);
+    }
+    .wiz h2 { margin: 0 0 6px; font-size: 1.2rem; }
+    .wiz .sub { color: var(--muted); font-size: .9rem; margin: 0 0 16px; line-height: 1.45; }
+    .wiz-steps { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+    .wiz-steps span {
+      flex: 1; min-width: 64px; text-align: center; font-size: .72rem; color: var(--muted);
+      padding: 6px 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg0);
+    }
+    .wiz-steps span.on { color: var(--text); border-color: var(--accent); background: rgba(61,154,122,.15); }
+    .wiz-steps span.done { color: var(--ok); border-color: rgba(74,222,128,.35); }
+    .wiz-pane { display: none; }
+    .wiz-pane.on { display: block; }
+    .wiz-pane label { margin-top: 12px; }
+    .wiz-err { color: #fca5a5; font-size: .85rem; margin-top: 10px; min-height: 1.2em; }
+    .wiz-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; align-items: center; }
+    .wiz-foot .right { display: flex; gap: 8px; }
+    .btn-link {
+      background: transparent; border: 0; color: var(--muted); font-weight: 500;
+      padding: 8px 4px; cursor: pointer; font: inherit;
+      transition: color .15s ease;
+    }
+    .btn-link:hover { color: var(--text); background: transparent; box-shadow: none; }
+    .btn-link:active { color: var(--accent); transform: none; }
+    .setup-banner {
+      display: none; margin: 0 32px 0; padding: 12px 14px; border-radius: 8px;
+      border: 1px solid rgba(232,165,75,.45); background: rgba(232,165,75,.1);
+      color: var(--text); font-size: .9rem; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .setup-banner.show { display: flex; }
+    @media (max-width: 960px) { .setup-banner { margin: 0 16px; flex-wrap: wrap; } }
   </style>
 </head>
 <body>
@@ -104,10 +182,103 @@
       <a href="/dev-flow" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">研发流程</a>
       <a href="/project-map" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">项目全景</a>
       <a href="/deploy" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">生产交付</a>
+      <button type="button" class="secondary" id="btnOpenWizard">分步引导配置</button>
     </nav>
     <h1 class="brand">OpenClaw <span>知识中台网关</span></h1>
     <p>企业向量库在骨架 <code>rag-service:8787</code>（Postgres/pgvector + llm-wiki）。本页只做配置与转发，不存生产向量。首次使用请先看 <a href="/guide">使用教程</a>；研发看 <a href="/dev-flow">流程</a>；目录职责看 <a href="/project-map">项目全景</a>；最终交付看 <a href="/deploy">生产部署</a>。</p>
   </header>
+  <div class="setup-banner" id="setupBanner">
+    <span>检测到尚未完成基础配置（便携包路径 / 中台地址）。建议先走一遍分步引导。</span>
+    <button type="button" id="btnBannerWizard">开始引导</button>
+  </div>
+
+  <div class="wiz-backdrop" id="wizBackdrop" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+    <div class="wiz">
+      <h2 id="wizTitle">首次配置引导</h2>
+      <p class="sub">按步骤填完即可开始用。随时可点右上角「分步引导配置」重来。</p>
+      <div class="wiz-steps" id="wizSteps">
+        <span data-i="0">1 路径</span>
+        <span data-i="1">2 平台</span>
+        <span data-i="2">3 回复范围</span>
+        <span data-i="3">4 查单</span>
+        <span data-i="4">5 完成</span>
+      </div>
+
+      <div class="wiz-pane on" data-step="0">
+        <p class="hint">OpenClaw 便携包目录，以及知识中台地址（本机联调一般是 8787）。</p>
+        <label>OPENCLAW_PORTABLE_ROOT（便携包路径）</label>
+        <input type="text" id="wizPortable" placeholder="例如 D:\OpenClaw-USB-Portable" />
+        <label>RAG_BASE_URL（中台地址）</label>
+        <input type="text" id="wizRagUrl" placeholder="http://127.0.0.1:8787" />
+        <label>RAG_API_KEY（可选，留空不改已有密钥）</label>
+        <input type="password" id="wizRagKey" placeholder="已设置则留空" autocomplete="off" />
+      </div>
+
+      <div class="wiz-pane" data-step="1">
+        <p class="hint">选择要自动处理的平台。监听=巡检会话；自动发送=生成后直接发出。</p>
+        <div class="row">
+          <div>
+            <label>美团 · 监听</label>
+            <select id="wizMtListen"><option value="true">开</option><option value="false">关</option></select>
+          </div>
+          <div>
+            <label>美团 · 自动发送</label>
+            <select id="wizMtSend"><option value="true">开</option><option value="false">关</option></select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>抖音 · 监听</label>
+            <select id="wizDyListen"><option value="true">开</option><option value="false">关</option></select>
+          </div>
+          <div>
+            <label>抖音 · 自动发送</label>
+            <select id="wizDySend"><option value="true">开</option><option value="false">关</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="wiz-pane" data-step="2">
+        <p class="hint">默认可回复所有有未读/待回的顾客。若要灰度，打开「仅白名单」并填写昵称。</p>
+        <label>仅白名单</label>
+        <select id="wizWlOnly">
+          <option value="false">关 · 可回所有人</option>
+          <option value="true">开 · 只回白名单</option>
+        </select>
+        <label>美团白名单（逗号分隔，可空）</label>
+        <input type="text" id="wizWlMt" placeholder="留空=不限制" />
+        <label>抖音白名单（逗号分隔，可空）</label>
+        <input type="text" id="wizWlDy" placeholder="留空=不限制" />
+      </div>
+
+      <div class="wiz-pane" data-step="3">
+        <p class="hint">顾客发订单号/订单卡时，用自有后台查进度。需 OpenClaw 浏览器已登录该后台。</p>
+        <label>自有系统查单</label>
+        <select id="wizOrderOn"><option value="true">开</option><option value="false">关</option></select>
+        <label>查单后台 URL</label>
+        <input type="text" id="wizOrderUrl" placeholder="https://…/biz/cxorderlaundry" />
+      </div>
+
+      <div class="wiz-pane" data-step="4">
+        <p class="hint">保存后即可在下方配置台继续上传知识库、试检索。改过路径类环境变量时，请重新运行 Start-All 使进程生效。</p>
+        <ul class="hint" style="margin:8px 0 0;padding-left:18px;line-height:1.6">
+          <li>打开托管浏览器，登录美团经营宝 / 抖音来客</li>
+          <li>上传门店 FAQ 到中台并编译</li>
+          <li>需要细调时回到本页完整表单</li>
+        </ul>
+      </div>
+
+      <div class="wiz-err" id="wizErr"></div>
+      <div class="wiz-foot">
+        <button type="button" class="btn-link" id="wizSkip">稍后再说</button>
+        <div class="right">
+          <button type="button" class="secondary" id="wizPrev">上一步</button>
+          <button type="button" id="wizNext">下一步</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <main>
     <section>
       <h2>中台状态</h2>
@@ -604,7 +775,136 @@
         await refresh();
       } catch (e) { log(e.message, "err"); }
     };
-    Promise.all([refresh(), loadEnv()]).catch((e) => log(e.message, "err"));
+
+    /* —— 分步引导 —— */
+    let wizStep = 0;
+    const WIZ_TOTAL = 5;
+    function setWizErr(msg) { $("wizErr").textContent = msg || ""; }
+    function renderWizStep() {
+      document.querySelectorAll(".wiz-pane").forEach((el) => {
+        el.classList.toggle("on", Number(el.getAttribute("data-step")) === wizStep);
+      });
+      document.querySelectorAll("#wizSteps span").forEach((el) => {
+        const i = Number(el.getAttribute("data-i"));
+        el.classList.toggle("on", i === wizStep);
+        el.classList.toggle("done", i < wizStep);
+      });
+      $("wizPrev").disabled = wizStep === 0;
+      $("wizNext").textContent = wizStep === WIZ_TOTAL - 1 ? "完成并保存" : "下一步";
+      setWizErr("");
+    }
+    function openWizard() {
+      // 从当前表单/环境预填
+      const portable = $("env_OPENCLAW_PORTABLE_ROOT");
+      const ragUrl = $("env_RAG_BASE_URL");
+      $("wizPortable").value = (portable && portable.value) || "";
+      $("wizRagUrl").value = ($("ragBase") && $("ragBase").value) || (ragUrl && ragUrl.value) || "http://127.0.0.1:8787";
+      $("wizRagKey").value = "";
+      $("wizMtListen").value = $("mtListen").value;
+      $("wizMtSend").value = $("mtAutoSend").value;
+      $("wizDyListen").value = $("dyListen").value;
+      $("wizDySend").value = $("dyAutoSend").value;
+      $("wizWlOnly").value = $("whitelistOnly").value;
+      $("wizWlMt").value = $("wlMeituan").value;
+      $("wizWlDy").value = $("wlDouyin").value;
+      $("wizOrderOn").value = $("orderLookup").value;
+      $("wizOrderUrl").value = $("orderBaseUrl").value;
+      wizStep = 0;
+      renderWizStep();
+      $("wizBackdrop").classList.add("open");
+    }
+    function closeWizard() {
+      $("wizBackdrop").classList.remove("open");
+    }
+    async function finishWizard() {
+      const portable = $("wizPortable").value.trim();
+      const ragUrl = $("wizRagUrl").value.trim().replace(/\/$/, "");
+      if (!portable) throw new Error("请填写 OpenClaw 便携包路径");
+      if (!ragUrl) throw new Error("请填写中台地址 RAG_BASE_URL");
+
+      const edgePatch = {
+        OPENCLAW_PORTABLE_ROOT: portable,
+        RAG_BASE_URL: ragUrl,
+      };
+      const key = $("wizRagKey").value;
+      if (key) edgePatch.RAG_API_KEY = key;
+      await api("/api/env", { method: "PUT", body: JSON.stringify({ edge: edgePatch, brain: {} }) });
+
+      await api("/api/config", {
+        method: "PUT",
+        body: JSON.stringify({
+          knowledge: {
+            mode: "remote",
+            rag: { baseUrl: ragUrl, apiKey: key || undefined },
+          },
+          whitelistOnly: $("wizWlOnly").value === "true",
+          onlyActionable: true,
+          whitelist: {
+            meituan: $("wizWlMt").value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+            douyin: $("wizWlDy").value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+          },
+          platforms: {
+            meituan: {
+              enabled: $("wizMtListen").value === "true",
+              autoSend: $("wizMtSend").value === "true",
+            },
+            douyin: {
+              enabled: $("wizDyListen").value === "true",
+              autoSend: $("wizDySend").value === "true",
+            },
+          },
+          systems: {
+            order: {
+              enabled: $("wizOrderOn").value === "true",
+              baseUrl: $("wizOrderUrl").value.trim() || undefined,
+            },
+          },
+          setup: { wizardCompleted: true },
+        }),
+      });
+      log("分步引导已完成并保存", "ok");
+      closeWizard();
+      $("setupBanner").classList.remove("show");
+      await loadEnv();
+      await refresh();
+    }
+    $("btnOpenWizard").onclick = () => openWizard();
+    $("btnBannerWizard").onclick = () => openWizard();
+    $("wizSkip").onclick = () => closeWizard();
+    $("wizPrev").onclick = () => { if (wizStep > 0) { wizStep--; renderWizStep(); } };
+    $("wizNext").onclick = async () => {
+      try {
+        if (wizStep === 0) {
+          if (!$("wizPortable").value.trim()) throw new Error("请填写便携包路径");
+          if (!$("wizRagUrl").value.trim()) throw new Error("请填写中台地址");
+        }
+        if (wizStep === WIZ_TOTAL - 1) {
+          $("wizNext").disabled = true;
+          await finishWizard();
+          $("wizNext").disabled = false;
+          return;
+        }
+        wizStep++;
+        renderWizStep();
+      } catch (e) {
+        $("wizNext").disabled = false;
+        setWizErr(e.message || String(e));
+      }
+    };
+    $("wizBackdrop").addEventListener("click", (e) => {
+      if (e.target === $("wizBackdrop")) closeWizard();
+    });
+
+    async function boot() {
+      await refresh();
+      await loadEnv();
+      const s = await api("/api/status");
+      if (s.needsSetup) {
+        $("setupBanner").classList.add("show");
+        openWizard();
+      }
+    }
+    boot().catch((e) => log(e.message, "err"));
   </script>
 </body>
 </html>

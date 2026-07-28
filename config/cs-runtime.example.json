@@ -8,9 +8,10 @@
     "whitelistOnly": "false=默认可回所有人（通常再按 onlyActionable 筛未读/待回）。true=只回白名单；全局 true 时平台不得放宽。白名单留空且本项 false=全量。",
     "knowledge.mode": "remote=企业主路径（中台 rag-service）；local=仅联调文件 Hybrid。",
     "knowledge.rag": "中台 baseUrl/apiKey/kbIds；联调默认本机 8787，生产改 .env 即可。",
-    "knowledge.fallbackLocal": "remote 失败是否降级本地文件；生产示例见 cs-runtime.prod.example.json（false）。",
-    "deploy": "最终交付：边端零库，只连远程中台。见 docs/deploy.md。"
-  },
+        "knowledge.fallbackLocal": "remote 失败是否降级本地文件；生产示例见 cs-runtime.prod.example.json（false）。",
+        "deploy": "最终交付：边端零库，只连远程中台。见 docs/deploy.md。",
+        "setup.wizardCompleted": "配置台分步引导是否已完成；未完成且缺便携包/中台地址时会自动弹出引导。"
+    },
   "cdpUrl": "http://127.0.0.1:18800",
   "gateway": {
     "baseUrl": "http://127.0.0.1:18789",

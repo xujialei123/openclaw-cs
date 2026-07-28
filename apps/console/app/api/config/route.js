@@ -70,6 +70,13 @@ export async function PUT(request) {
         },
       };
     }
+    if (body.setup && typeof body.setup === "object") {
+      rt.setup = { ...(rt.setup || {}), ...body.setup };
+      if (Object.prototype.hasOwnProperty.call(body.setup, "wizardCompleted")) {
+        rt.setup.wizardCompleted = body.setup.wizardCompleted === true;
+        if (rt.setup.wizardCompleted) rt.setup.completedAt = new Date().toISOString();
+      }
+    }
     const checked = validateRuntimeConfig(rt);
     if (!checked.ok) {
       return NextResponse.json({ ok: false, errors: checked.errors }, { status: 400 });

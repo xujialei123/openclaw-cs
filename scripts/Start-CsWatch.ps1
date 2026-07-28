@@ -43,6 +43,7 @@ function Import-DotEnv([string]$EnvFile) {
 
 Import-DotEnv (Join-Path $Root ".env")
 
+$Cfg = if ($Config) { $Config } elseif ($env:CS_RUNTIME_CONFIG) { $env:CS_RUNTIME_CONFIG } else { Join-Path $Root "config\cs-runtime.json" }
 $PortableRoot = if ($env:OPENCLAW_PORTABLE_ROOT) { $env:OPENCLAW_PORTABLE_ROOT } else { "F:\OpenClaw-USB-Portable" }
 $Node = Join-Path $PortableRoot "app\runtime\node-win-x64\node.exe"
 $OpenClawMjs = Join-Path $PortableRoot "app\core\node_modules\openclaw\openclaw.mjs"

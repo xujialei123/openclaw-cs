@@ -136,6 +136,32 @@ function publicEnvView(filePath, allowKeys) {
   return out;
 }
 
+/** 是否需要弹出首次分步引导（未点过「完成」且关键路径/中台未就绪） */
+function computeSetupState(rt) {
+  const edge = publicEnvView(EDGE_ENV, EDGE_ENV_KEYS);
+  const completed = rt?.setup?.wizardCompleted === true;
+  const portableOk = !!edge.OPENCLAW_PORTABLE_ROOT?.set;
+  const ragOk = !!(edge.RAG_BASE_URL?.set || String(rt?.knowledge?.rag?.baseUrl || "").trim());
+  const reasons = [];
+  if (!portableOk) reasons.push("缺少 OPENCLAW_PORTABLE_ROOT");
+  if (!ragOk) reasons.push("缺少中台 RAG_BASE_URL");
+  if (!completed && (!portableOk || !ragOk)) {
+    return { needsSetup: true, wizardCompleted: false, reasons };
+  }
+  return { needsSetup: false, wizardCompleted: completed, reasons };
+}
+
+/** 若本地无 cs-runtime.json，从 example 复制一份供首次配置 */
+function ensureRuntimeFile(configPath) {
+  if (fs.existsSync(configPath)) return;
+  const example = path.join(ROOT, "config", "cs-runtime.example.json");
+  const prodEx = path.join(ROOT, "config", "cs-runtime.prod.example.json");
+  const src = fs.existsSync(example) ? example : prodEx;
+  if (!fs.existsSync(src)) return;
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.copyFileSync(src, configPath);
+}
+
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -357,6 +383,7 @@ function createServer(ctx) {
       }
 
       if (method === "GET" && u.pathname === "/api/status") {
+        ensureRuntimeFile(ctx.configPath);
         const rt = runtime();
         const kb = rt.knowledge || {};
         const ragOnline = await pingRag(kb.rag || {});
@@ -370,6 +397,7 @@ function createServer(ctx) {
             ragError = `kb/list HTTP ${list.status}`;
           }
         }
+        const setup = computeSetupState(rt);
         sendJson(res, 200, {
           ok: true,
           mode: kb.mode || "local",
@@ -378,12 +406,15 @@ function createServer(ctx) {
           ragBaseUrl: ragBase(rt),
           ragError,
           knowledgeBases,
+          needsSetup: setup.needsSetup,
+          setup,
           config: {
             knowledge: kb,
             whitelist: rt.whitelist,
             whitelistOnly: rt.whitelistOnly === true,
             onlyActionable: rt.onlyActionable !== false,
             autoSend: rt.autoSend !== false,
+            setup: rt.setup || { wizardCompleted: false },
             platforms: {
               meituan: {
                 enabled: rt.platforms?.meituan?.enabled !== false,
@@ -522,6 +553,13 @@ function createServer(ctx) {
               }
             }
             rt.systems.order = next;
+          }
+        }
+        if (body.setup && typeof body.setup === "object") {
+          rt.setup = { ...(rt.setup || {}), ...body.setup };
+          if (Object.prototype.hasOwnProperty.call(body.setup, "wizardCompleted")) {
+            rt.setup.wizardCompleted = body.setup.wizardCompleted === true;
+            if (rt.setup.wizardCompleted) rt.setup.completedAt = new Date().toISOString();
           }
         }
         const checked = validateRuntimeConfig(rt);
@@ -795,6 +833,7 @@ function createServer(ctx) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  ensureRuntimeFile(args.config);
   const runtime = loadJson(args.config, {});
   const port = Number(runtime.knowledge?.adminPort || args.port || 18790);
   const host = args.host;
