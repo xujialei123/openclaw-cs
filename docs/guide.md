@@ -120,7 +120,20 @@ npm run stop
 # 说明：cs-runtime.json / 白名单每轮热读；改 JS 需 edge:dev 或重启巡检
 ```
 
-桌面端说明见 [`apps/desktop/README.md`](../apps/desktop/README.md)。关闭窗口会进托盘；退出托盘菜单会尝试 `Stop-All`。
+桌面端说明见 [`apps/desktop/README.md`](../apps/desktop/README.md)。**关闭窗口或托盘「退出」都会先 `Stop-All` 再退出**（最小化窗口不会停服务）。
+
+**配置页位置**：一体端窗口右侧 **「配置中心」**（内嵌 `http://127.0.0.1:18790/`），不弹系统浏览器；管理台绿灯后点「刷新配置页」。桌面壳改 `apps/desktop/ui/`；配置台/教程改 `admin/docs.css`、`admin/config.css`、`admin/index.html`（重启管理台或点刷新配置页）。独立「日志页」没有——启动日志在桌面左栏，配置台内有操作日志面板。
+
+打 Windows 安装包（默认内置精简 OpenClaw 便携包，**不含登录态**）：
+
+```powershell
+npm run desktop:dist
+# 产物：dist-pack/desktop/OpenClaw-CS-Setup-*.exe
+```
+
+装机后直接「启动全部」，再在托管浏览器扫码登录即可。若打包时加 `-SkipPortable`，则需手动选便携包目录。
+
+覆盖安装前先从托盘退出一体端。若安装器提示「无法关闭」：多半是**旧目录里的 portable `node.exe` 还在跑**（不是主程序关不掉）。取消安装 → 任务管理器结束所有路径含 `openclaw-portable` 的 `node.exe` → 删掉旧安装目录 → 用 **0.2.3+** 重装到短路径如 `F:\OpenClawCS`。
 
 启动顺序：
 
@@ -199,6 +212,18 @@ RAG_API_KEY=...
 3. `knowledge.mode` 为 `remote`，`rag.kbIds` 已填中台知识库 ID。
 4. 日志 `memory/cs-watch.log` 出现 `TICK` / `MEITUAN` / `DOUYIN`，检索优先见 `KB_HIT via=remote`。
 
+### 美团慢回 / 不回（先看日志）
+
+| 日志 | 含义 | 怎么处理 |
+|---|---|---|
+| 无新的 `TICK` / 进程不在 | 巡检挂了（常见 `cdp timeout`） | 桌面端或 `Start-CsWatch` 重启巡检 |
+| `MEITUAN skip cooldown … 60s` | 刚查过且无未读，冷却中 | 正常；列表预览变成新问句应立刻再进 |
+| `MEITUAN skip empty/ui` | 切进会话后读不到未处理顾客气泡 | 看未读角标是否为 0、气泡是否被智能推荐挡住；改代码后需**重启 cs-watch** |
+| `unreadTotal=0` 且预览仍是旧问句 | 该句可能已回过（`processed` 有指纹） | 用白名单再发一条**新**消息测 |
+| 顾客说「转人工」却不进线 | 旧逻辑把含「转人工」的句误判成客服话 | 已修：只过滤客服侧「帮您转人工」等；重启巡检生效 |
+
+改 `apps/edge-worker/cs-watch.js` 后配置热读不够，必须重启巡检进程。
+
 ## 日常操作
 
 ### 改白名单
@@ -216,6 +241,39 @@ RAG_API_KEY=...
 | 美团/抖音 · 自动发送 | `platforms.*.autoSend` | 仍识别/生成回复，只进 `pending` 不发出 |
 
 全局 `autoSend: false` 仍会关掉所有平台发送。保存后下个 tick 生效。
+
+### OpenClaw「browser navigation blocked by policy」
+
+启动巡检时若报 `GatewayClientRequestError: browser navigation blocked by policy`：OpenClaw 默认 SSRF 策略拦了打开美团/抖音页面。
+
+在便携包 `data\.openclaw\openclaw.json` 增加（或合并）后**重启 Gateway**：
+
+```json
+"browser": {
+  "ssrfPolicy": {
+    "dangerouslyAllowPrivateNetwork": true,
+    "allowedHostnames": [
+      "g.dianping.com",
+      "life.douyin.com",
+      "yl-saas.xiyihangye.com"
+    ]
+  }
+}
+```
+
+再跑 `Start-CsWatch` / 一体端「启动全部」。
+
+### 转人工推送到企微群
+
+升级（退款/赔偿、知识库强制 escalate、话术含「转人工」等）时，可推到**企微内部群**，方便负责人手机感知。
+
+**只在配置中心配置**（不要再写 `.env`）：
+
+1. 企微内部运营群 → 右上角 `···` → **添加群机器人** → 复制 Webhook  
+2. 打开配置中心 → **升级通知 · 企微群**：粘贴 Webhook、启用=开 → 点「保存到 cs-runtime.json」  
+3. 验收：触发退款类话术 → 群里收到摘要；日志 `ESCALATE_NOTIFY ok`
+
+说明：只能推**内部群**；开关与地址以配置页为准（`notify.escalate`）。
 
 ### 企业微信智能机器人（长连接 API）
 
@@ -238,6 +296,26 @@ RAG_API_KEY=...
 6. 验收：私聊机器人 / 群里 @ 机器人发「查一下订单号…」→ 日志出现 `WECOM` + `ORDER_LOOKUP`  
 
 文档：[智能机器人长连接](https://developer.work.weixin.qq.com/document/path/101463)
+
+### 运营场景自动化（开站 → 扫描 → 操作）
+
+面向**内部运营**（默认仅企微 `allowedPlatforms: ["wecom"]`），通过聊天让 OpenClaw 打开浏览器、扫描页面，再按场景配方或安全动作执行。
+
+1. 复制 `config/scenarios.example.json` → `config/scenarios.json`，按业务加场景（`triggers` / `startUrl` / `steps`）  
+2. `cs-runtime.json` → `systems.scenarios.enabled: true`  
+3. CDP 浏览器在线后，在企微对机器人说例如：
+   - `打开订单后台`
+   - `打开美团客服`
+   - `打开网站 https://example.com 并扫描`
+   - `打开网站 https://… 然后点击查询`（需 `allowLlmAutomate`）  
+4. CLI 联调：
+   ```powershell
+   npm run scenario -- --list
+   npm run scenario -- --run order_dashboard
+   npm run scenario -- --browse "https://example.com"
+   ```
+
+安全限制：顾客侧美团/抖音默认**不会**触发任意开站；动作仅允许 `clickText` / `type` / `enter` / `wait` / `scan`。
 
 ### 自有系统查单（洗护 SaaS）
 

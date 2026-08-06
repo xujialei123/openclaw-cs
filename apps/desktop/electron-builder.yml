@@ -1,0 +1,38 @@
+appId: com.openclaw.cs.desktop
+productName: OpenClaw客服一体端
+# ASCII exe name — Chinese productName makes NSIS "app cannot be closed" false-positive
+executableName: OpenClaw-CS
+copyright: OpenClaw CS
+directories:
+  output: ../../dist-pack/desktop
+  buildResources: build
+files:
+  - main.js
+  - preload.js
+  - ensure-electron.js
+  - package.json
+  - ui/**/*
+extraResources:
+  - from: ../../dist-pack/desktop-stage/openclaw-cs
+    to: openclaw-cs
+  - from: ../../dist-pack/desktop-stage/openclaw-portable
+    to: openclaw-portable
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
+win:
+  signAndEditExecutable: false
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: OpenClaw-CS-Setup-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: OpenClaw客服一体端
+  language: 2052
+  # relative to buildResources (apps/desktop/build)
+  include: installer.nsh

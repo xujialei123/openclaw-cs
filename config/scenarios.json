@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "_comment": "运营场景包：聊天触发 → OpenClaw 浏览器打开 URL → 扫描页面 → 按 recipe 或安全动作自动化。复制为 scenarios.json 后在 cs-runtime.systems.scenarios 启用。",
+  "scenarios": [
+    {
+      "id": "order_dashboard",
+      "name": "洗护订单后台",
+      "enabled": true,
+      "triggers": ["打开订单后台", "打开查单系统", "进入洗护后台", "打开全部订单"],
+      "startUrl": "https://yl-saas.xiyihangye.com/biz/cxorderlaundry",
+      "urlIncludes": "yl-saas.xiyihangye.com",
+      "mode": "recipe",
+      "steps": [
+        { "op": "wait", "ms": 2200 },
+        { "op": "scan" }
+      ]
+    },
+    {
+      "id": "meituan_im",
+      "name": "美团经营宝客服",
+      "enabled": true,
+      "triggers": ["打开美团客服", "打开经营宝", "进入美团聊天"],
+      "startUrl": "https://g.dianping.com/dzim-main-pc/index.html#/",
+      "urlIncludes": "g.dianping.com/dzim-main-pc",
+      "mode": "scan",
+      "steps": [{ "op": "wait", "ms": 2500 }, { "op": "scan" }]
+    },
+    {
+      "id": "douyin_cs",
+      "name": "抖音来客客服",
+      "enabled": true,
+      "triggers": ["打开抖音客服", "打开来客", "进入抖音聊天"],
+      "startUrl": "https://life.douyin.com/cs/web",
+      "urlIncludes": "life.douyin.com",
+      "mode": "scan",
+      "steps": [{ "op": "wait", "ms": 2500 }, { "op": "scan" }]
+    },
+    {
+      "id": "generic_browse",
+      "name": "打开并扫描任意网址",
+      "enabled": true,
+      "triggers": ["打开网站", "打开网页", "扫描网站", "浏览并扫描"],
+      "mode": "browse_scan",
+      "_comment": "从聊天里提取 https URL；可再跟「然后点击xxx / 填写xxx」走 LLM 安全动作（需 systems.scenarios.allowLlmAutomate）。"
+    }
+  ]
+}

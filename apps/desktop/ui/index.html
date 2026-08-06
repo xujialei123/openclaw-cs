@@ -3,45 +3,104 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenClaw 客服桌面端</title>
+    <title>OpenClaw 客服一体端</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="bar">
-      <div class="brand">
-        <span class="mark"></span>
-        <div>
-          <strong>OpenClaw 客服</strong>
-          <small id="roleHint">本机边端控制台</small>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">OC</span>
+          <div class="brand-text">
+            <div class="brand-row">
+              <strong>OpenClaw</strong>
+              <span class="badge">客服一体端</span>
+            </div>
+            <small id="roleHint">本机服务控制台</small>
+          </div>
         </div>
-      </div>
-      <div class="actions">
-        <button type="button" id="btnStart" class="primary">启动服务</button>
-        <button type="button" id="btnStop">停止服务</button>
-        <button type="button" id="btnRefresh">刷新状态</button>
-        <button type="button" id="btnLogs">日志目录</button>
-        <button type="button" id="btnAdmin">浏览器打开</button>
-      </div>
-    </header>
 
-    <section class="status" id="statusRow">
-      <div class="pill" data-k="admin"><span class="dot"></span>管理台</div>
-      <div class="pill" data-k="gateway"><span class="dot"></span>Gateway</div>
-      <div class="pill" data-k="cdp"><span class="dot"></span>浏览器 CDP</div>
-      <div class="pill" data-k="watch"><span class="dot"></span>巡检</div>
-      <div class="pill" data-k="wecom"><span class="dot"></span>企微桥</div>
-    </section>
+        <div class="topbar-center">
+          <span id="stackHint" class="stack-hint">检测中…</span>
+          <p class="msg" id="msg">正在检测服务…</p>
+        </div>
 
-    <p class="msg" id="msg">正在检测服务…</p>
+        <div class="actions">
+          <div class="btn-group primary-group">
+            <button type="button" id="btnStart" class="btn btn-primary">启动全部</button>
+            <button type="button" id="btnStop" class="btn btn-danger">停止全部</button>
+          </div>
+          <div class="btn-group">
+            <button type="button" id="btnAdmin" class="btn">刷新配置页</button>
+            <button type="button" id="btnRefresh" class="btn">刷新状态</button>
+            <button type="button" id="btnPortable" class="btn">OpenClaw 目录</button>
+            <button type="button" id="btnLogs" class="btn">日志目录</button>
+          </div>
+        </div>
+      </header>
 
-    <main class="frame-wrap">
-      <iframe id="adminFrame" title="管理台" src="about:blank"></iframe>
-      <div class="empty" id="empty">
-        <h1>服务尚未就绪</h1>
-        <p>点击上方「启动服务」，将调用本仓 Start-All（含 OpenClaw、巡检、企微桥与管理台）。</p>
-        <p class="hint">需已配置 <code>OPENCLAW_PORTABLE_ROOT</code>（默认 <code>F:\OpenClaw-USB-Portable</code>）与 <code>config/cs-runtime.json</code>。</p>
+      <section class="toolbar">
+        <label class="check">
+          <input type="checkbox" id="chkAuto" />
+          <span>打开应用时自动启动全部服务</span>
+        </label>
+        <span class="toolbar-note">关闭窗口将停止全部服务；最小化可继续运行</span>
+      </section>
+
+      <section class="status" id="statusRow" aria-label="服务状态">
+        <div class="pill" data-k="portableOk"><span class="dot"></span><span class="pill-label">OpenClaw 包</span></div>
+        <div class="pill" data-k="dockerOk" title="Docker Desktop 需单独安装"><span class="dot"></span><span class="pill-label">Docker</span></div>
+        <div class="pill" data-k="rag"><span class="dot"></span><span class="pill-label">知识库</span></div>
+        <div class="pill" data-k="admin"><span class="dot"></span><span class="pill-label">管理台</span></div>
+        <div class="pill" data-k="gateway"><span class="dot"></span><span class="pill-label">Gateway</span></div>
+        <div class="pill" data-k="cdp"><span class="dot"></span><span class="pill-label">浏览器 CDP</span></div>
+        <div class="pill" data-k="watch"><span class="dot"></span><span class="pill-label">巡检</span></div>
+        <div class="pill" data-k="wecom"><span class="dot"></span><span class="pill-label">企微桥</span></div>
+      </section>
+
+      <div class="workspace">
+        <aside class="log-panel" id="logPanel">
+          <div class="panel-head">
+            <div>
+              <strong>运行日志</strong>
+              <span class="panel-sub">启动 / 停止实时输出</span>
+            </div>
+            <button type="button" id="btnClearLog" class="btn btn-mini">清空</button>
+          </div>
+          <pre id="logView" class="log-view" aria-live="polite"></pre>
+          <p class="log-note">
+            Docker Desktop 需单独安装。已安装则启动时自动拉起引擎并建表。配置中心仅在右侧操作，不弹系统浏览器。
+          </p>
+        </aside>
+
+        <main class="frame-wrap">
+          <div class="panel-head frame-head">
+            <div>
+              <strong>配置中心</strong>
+              <span class="panel-sub">管理台 · 白名单 · 知识库 · 环境变量</span>
+            </div>
+          </div>
+          <div class="frame-body">
+            <iframe id="adminFrame" title="配置中心" src="about:blank"></iframe>
+            <div class="empty" id="empty">
+              <div class="empty-card">
+                <div class="empty-icon" aria-hidden="true"></div>
+                <h1>服务尚未就绪</h1>
+                <p>
+                  点击左上角「启动全部」，将拉起知识库、管理台、Gateway、托管浏览器、美团/抖音巡检与企微桥。左侧可查看实时日志。
+                </p>
+                <ol class="empty-steps">
+                  <li>启动全部服务</li>
+                  <li>在配置中心完成店铺与密钥配置</li>
+                  <li>在橙框浏览器扫码登录各平台</li>
+                </ol>
+                <p class="hint" id="emptyHint">内置 OpenClaw 便携包；登录态需在托管浏览器中完成。</p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
 
     <script src="app.js"></script>
   </body>

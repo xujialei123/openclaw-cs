@@ -76,6 +76,17 @@
             "maxResults": 3
         }
     },
+    "notify": {
+        "escalate": {
+            "enabled": true,
+            "channel": "wecom_webhook",
+            "wecomWebhookUrl": "",
+            "cooldownSec": 300,
+            "mentionAll": false,
+            "title": "客服升级人工",
+            "_comment": "Webhook 只在配置中心填写；勿把 key 提交到 git。"
+        }
+    },
     "stateFile": "memory/cs-watch-state.json",
     "logFile": "memory/cs-watch.log"
 }

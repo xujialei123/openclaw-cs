@@ -14,6 +14,7 @@ const FILES = {
   "project-map": { file: "project-map.html", type: "text/html; charset=utf-8" },
   deploy: { file: "deploy.html", type: "text/html; charset=utf-8" },
   "docs.css": { file: "docs.css", type: "text/css; charset=utf-8" },
+  "config.css": { file: "config.css", type: "text/css; charset=utf-8" },
   "docs-render.js": { file: "docs-render.js", type: "application/javascript; charset=utf-8" },
 };
 

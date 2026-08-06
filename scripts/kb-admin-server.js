@@ -357,7 +357,12 @@ function createServer(ctx) {
         sendFile(res, path.join(ADMIN_DIR, "dev-flow.html"), MIME[".html"]);
         return;
       }
-      if (method === "GET" && (u.pathname === "/docs.css" || u.pathname === "/docs-render.js")) {
+      if (
+        method === "GET" &&
+        (u.pathname === "/docs.css" ||
+          u.pathname === "/config.css" ||
+          u.pathname === "/docs-render.js")
+      ) {
         const name = u.pathname.slice(1);
         const fp = path.join(ADMIN_DIR, name);
         if (!fs.existsSync(fp)) {
@@ -444,6 +449,16 @@ function createServer(ctx) {
                 },
               },
             },
+            notify: {
+              escalate: {
+                enabled: rt.notify?.escalate?.enabled === true,
+                channel: rt.notify?.escalate?.channel || "wecom_webhook",
+                wecomWebhookUrl: rt.notify?.escalate?.wecomWebhookUrl || "",
+                cooldownSec: rt.notify?.escalate?.cooldownSec ?? 300,
+                mentionAll: rt.notify?.escalate?.mentionAll === true,
+                title: rt.notify?.escalate?.title || "客服升级人工",
+              },
+            },
           },
         });
         return;
@@ -460,6 +475,7 @@ function createServer(ctx) {
           autoSend: rt.autoSend !== false,
           platforms: rt.platforms,
           systems: rt.systems,
+          notify: rt.notify || {},
         });
         return;
       }
@@ -553,6 +569,32 @@ function createServer(ctx) {
               }
             }
             rt.systems.order = next;
+          }
+        }
+        if (body.notify && typeof body.notify === "object") {
+          rt.notify = rt.notify || {};
+          if (body.notify.escalate && typeof body.notify.escalate === "object") {
+            const prev = rt.notify.escalate || {};
+            const patch = body.notify.escalate;
+            const next = { ...prev };
+            if (Object.prototype.hasOwnProperty.call(patch, "enabled")) next.enabled = patch.enabled === true;
+            if (Object.prototype.hasOwnProperty.call(patch, "channel")) {
+              next.channel = String(patch.channel || "wecom_webhook") === "wecom_webhook" ? "wecom_webhook" : "wecom_webhook";
+            }
+            if (Object.prototype.hasOwnProperty.call(patch, "wecomWebhookUrl")) {
+              // 配置页为唯一入口：原样保存（空=关闭可用地址）
+              next.wecomWebhookUrl = String(patch.wecomWebhookUrl || "").trim();
+            }
+            if (Object.prototype.hasOwnProperty.call(patch, "cooldownSec")) {
+              const n = Number(patch.cooldownSec);
+              if (Number.isFinite(n) && n >= 0 && n <= 86400) next.cooldownSec = Math.floor(n);
+            }
+            if (Object.prototype.hasOwnProperty.call(patch, "mentionAll")) next.mentionAll = patch.mentionAll === true;
+            if (Object.prototype.hasOwnProperty.call(patch, "title")) {
+              const t = String(patch.title || "").trim();
+              if (t) next.title = t.slice(0, 80);
+            }
+            rt.notify.escalate = next;
           }
         }
         if (body.setup && typeof body.setup === "object") {

@@ -108,6 +108,7 @@
     "普通衣鞋默认暂不支持上门取件；三室一厅窗帘可上门取送。",
     "不确定的退款金额、赔偿、改价必须升级人工，不得擅自承诺。",
     "查单：顾客发订单号（yl_…）或手机号时走 systems.order 自有系统查询，不得编造状态。",
+    "内部运营可用场景自动化（企微）：打开后台/扫描网页后按配方操作，不得对顾客通道开放任意开站。",
     "语气简短礼貌，一次只问一个关键信息。"
   ],
   "systems": {
@@ -129,6 +130,27 @@
         "_comment": "意图以 AI 为准：AI 判否不再被关键词覆盖；规则仅在 AI 调用失败时兜底。hard 单号/手机仍直通。"
       },
       "_comment": "自有洗护 SaaS 全部订单页。查单意图默认 AI；freeTextKeyword=false 禁止把整句问话当订单关键字。"
+    },
+    "scenarios": {
+      "enabled": true,
+      "configFile": "config/scenarios.json",
+      "allowedPlatforms": ["wecom"],
+      "allowGenericBrowse": true,
+      "allowLlmAutomate": true,
+      "maxScanChars": 6000,
+      "timeoutMs": 45000,
+      "_comment": "运营场景：聊天触发 OpenClaw 开站→扫描→recipe/安全动作。默认仅企微；场景列表见 config/scenarios.example.json。"
+    }
+  },
+  "notify": {
+    "escalate": {
+      "enabled": false,
+      "channel": "wecom_webhook",
+      "wecomWebhookUrl": "",
+      "cooldownSec": 300,
+      "mentionAll": false,
+      "title": "客服升级人工",
+      "_comment": "转人工推企微内部群。只在配置中心「升级通知」填写开关与 Webhook；同顾客冷却 cooldownSec 秒。"
     }
   },
   "stateFile": "memory/cs-watch-state.json",

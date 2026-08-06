@@ -85,6 +85,30 @@ try {
   orderLookup = null;
 }
 
+/** @type {typeof import('./escalate-notify')} */
+let escalateNotify = null;
+try {
+  escalateNotify = require("./escalate-notify");
+} catch (e) {
+  escalateNotify = null;
+}
+
+/** 升级推企微群：失败不影响主链路 */
+function fireEscalateNotify(cfg, info) {
+  if (!escalateNotify) return;
+  escalateNotify
+    .notifyEscalation(cfg, info, (line) => log(cfg, line))
+    .catch((e) => log(cfg, "ESCALATE_NOTIFY err", String(e.message || e).slice(0, 80)));
+}
+
+/** @type {typeof import('./scenario-runner')} */
+let scenarioRunner = null;
+try {
+  scenarioRunner = require("./scenario-runner");
+} catch (e) {
+  scenarioRunner = null;
+}
+
 const DEFAULT_CONFIG = path.join(__dirname, "..", "..", "config", "cs-runtime.json");
 const PROJECT_ROOT = path.join(__dirname, "..", "..");
 const args = process.argv.slice(2);
@@ -986,6 +1010,42 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
     }
   }
 
+  // ---- 运营场景：开站 / 扫描 / 安全自动化（默认仅 wecom 等 allowedPlatforms）----
+  if (scenarioRunner && typeof scenarioRunner.tryHandle === "function") {
+    try {
+      const handled = await scenarioRunner.tryHandle(cfg, msg, {
+        platform,
+        recent: recent || [],
+        customer,
+      });
+      if (handled && handled.reply) {
+        const meta = handled.meta || {};
+        log(
+          cfg,
+          "SCENARIO",
+          meta.reason || "ok",
+          meta.scenarioId || "",
+          meta.how || "",
+          msg.slice(0, 40)
+        );
+        return handled.reply;
+      }
+    } catch (e) {
+      const err = String(e.message || e);
+      log(cfg, "SCENARIO_FAIL", err.slice(0, 160));
+      if (
+        /(打开|扫描|浏览|进入).{0,12}(网站|网页|后台|经营宝|来客|订单)/.test(msg) ||
+        /https?:\/\/\S+/i.test(msg)
+      ) {
+        return (
+          "场景自动化暂时失败：" +
+          err.slice(0, 120) +
+          "。请确认 OpenClaw 浏览器 CDP 在线后重试。"
+        );
+      }
+    }
+  }
+
   const isCasualChat = (t) => {
     const s = String(t || "").trim();
     if (!s) return true;
@@ -1729,7 +1789,8 @@ function isAgentLikeText(t) {
     s.includes("已收到您的消息") ||
     s.includes("方便说下具体需求") ||
     s.includes("暂不支持上门") ||
-    s.includes("转人工") ||
+    // 只认客服侧话术，禁止把顾客原句「转人工」误判成已回复
+    /(帮您转人工|转人工核实|转交人工|升级人工|转人工处理|先帮您转)/.test(s) ||
     s.includes("对照门店最新政策") ||
     s.includes("帮您准确答复") ||
     s.includes("我可以帮您查进度") ||
@@ -1749,7 +1810,7 @@ function looksLikeCustomerUtterance(t, opts = {}) {
   const s = String(t || "").trim();
   if (!s || isUiChromeText(s) || isAgentLikeText(s)) return false;
   const askLike =
-    /[吗麼么呢吧啊哟哦哈]|怎么|怎样|可以|能不能|多少|几天|上门|取件|退款|订单|在吗|干啥|你好|哈喽|地址|位置|到店|门店|需要|好的|谢谢|在哪|什么时候/.test(
+    /[吗麼么呢吧啊哟哦哈]|怎么|怎样|可以|能不能|多少|几天|上门|取件|退款|订单|在吗|干啥|你好|哈喽|地址|位置|到店|门店|需要|好的|谢谢|在哪|什么时候|转人工|人工服务|人工客服|找人工/.test(
       s
     );
   if (askLike) return true;
@@ -2299,12 +2360,21 @@ async function processMeituan(cfg, state) {
       const sessionKey = meituanSessionKey(customer, target);
       const sessionTag = `${customer}#${target.listIndex}/[${(target.last || "").slice(0, 16)}]`;
 
-      // 刚检查过且无待回：短冷却，避免白名单每 tick 空转；有未读/待回复则立刻进
+      // 刚检查过且无待回：冷却避免白名单每 tick 空转；列表预览出现新顾客句则立刻再进（对齐抖音）
       const mtQuiet = state.quiet?.[`meituan:${sessionKey}`];
       if (mtQuiet?.allProcessed && !(target.unread > 0) && !target.pendingReply) {
         const age = Date.now() - new Date(mtQuiet.at || 0).getTime();
-        // 无咨询时冷却加长到 60s，减少空点进线 + 误读商品卡
-        if (Number.isFinite(age) && age < 60000) {
+        const preview = String(target.last || "").trim();
+        const samePreview =
+          !!mtQuiet.msg &&
+          !!preview &&
+          (preview === mtQuiet.msg || preview.includes(mtQuiet.msg) || mtQuiet.msg.includes(preview));
+        const freshCustomerPreview =
+          !samePreview &&
+          !isUiChromeText(preview) &&
+          looksLikeCustomerUtterance(preview, { strict: true });
+        // 无咨询时冷却 60s；预览变了（如「转人工」）不算同会话空转
+        if (Number.isFinite(age) && age < 60000 && !freshCustomerPreview) {
           log(cfg, "MEITUAN skip cooldown", sessionTag, `${Math.round(age / 1000)}s`);
           continue;
         }
@@ -2452,6 +2522,17 @@ async function processMeituan(cfg, state) {
           reply.slice(0, 60),
           escalate ? "(escalate)" : ""
         );
+        if (escalateNotify && escalateNotify.shouldNotifyEscalation(escalate, reply)) {
+          fireEscalateNotify(cfg, {
+            platform: "meituan",
+            customer,
+            sessionKey,
+            lastCustomerMsg,
+            reply,
+            escalate: !!escalate,
+            reason: escalate ? "escalate-hold" : "reply-mentions-handoff",
+          });
+        }
 
         const soft = isSoftClarifyReply(lastCustomerMsg, reply);
         const allowSend = isAutoSend(cfg, "meituan");
@@ -2969,6 +3050,17 @@ async function processDouyin(cfg, state) {
           reply.slice(0, 60),
           escalate ? "(escalate)" : ""
         );
+        if (escalateNotify && escalateNotify.shouldNotifyEscalation(escalate, reply)) {
+          fireEscalateNotify(cfg, {
+            platform: "douyin",
+            customer,
+            sessionKey: customer,
+            lastCustomerMsg,
+            reply,
+            escalate: !!escalate,
+            reason: escalate ? "escalate-hold" : "reply-mentions-handoff",
+          });
+        }
 
         const soft = isSoftClarifyReply(lastCustomerMsg, reply);
         const allowSend = isAutoSend(cfg, "douyin");
@@ -3136,6 +3228,7 @@ module.exports = {
   loadRuntimeConfig,
   normalizeRuntimeConfig,
   sanitizeCustomerFacingReply,
+  fireEscalateNotify,
   PROJECT_ROOT,
 };
 

@@ -19,6 +19,8 @@
     "edge:dev": "node --watch --watch-path=apps/edge-worker apps/edge-worker/cs-watch.js",
     "wecom": "node apps/wecom-bridge/index.js",
     "desktop": "npm --prefix apps/desktop start",
+    "desktop:dist": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Pack-Desktop.ps1",
+    "scenario": "node apps/edge-worker/scenario-runner.js",
     "console": "node scripts/run-next-console.js dev",
     "console:build": "node scripts/run-next-console.js build",
     "console:start": "node scripts/run-next-console.js start",

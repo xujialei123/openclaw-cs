@@ -40,7 +40,7 @@
 
 | ID | 状态 | 任务 | 验收 |
 |---|---|---|---|
-| TP.1 | `[~]` | 美团白名单巡检稳定（未读/同名多会话/去重） | 无连发、无错会话；`settle ok` |
+| TP.1 | `[~]` | 美团白名单巡检稳定（未读/同名多会话/去重） | 无连发、无错会话；`settle ok`；已修：顾客「转人工」误判 + 列表预览变化破冷却 |
 | TP.2 | `[~]` | 抖音白名单巡检稳定（contactCard / 气泡清洗 / quiet） | `DOUYIN detect` → `send ok`；不卡旧气泡 |
 | TP.3 | `[ ]` | 检索强制带 `shopId + platform + kbIds` | 日志可见；禁止串店话术 |
 | TP.4 | `[ ]` | 常用 FAQ 进中台并 `via=remote` 命中 | 营业/套餐/上门/周末等不以脚本兜底为主 |
@@ -51,6 +51,7 @@
 | TP.9 | `[x]` | 启动带使用教程 + 研发流程页 | `/guide` `/dev-flow`；新功能必须同步文档（AGENTS） |
 | TP.10 | `[~]` | **形态自检**：边端可只连远程中台（本机可不跑库） | `DEPLOY_ROLE=edge` + `RAG_BASE_URL`；`-SkipDocker` |
 | TP.11 | `[x]` | 配置样例拆分：`cs-runtime.json`（联调）/ `cs-runtime.prod.example.json` | prod：`fallbackLocal=false`、远程 baseUrl |
+| TP.12 | `[x]` | 转人工推企微内部群 Webhook | `notify.escalate` / `WECOM_ESCALATE_WEBHOOK_URL`；日志 `ESCALATE_NOTIFY ok` |
 
 ---
 

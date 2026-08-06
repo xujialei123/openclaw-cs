@@ -26,6 +26,7 @@
 | `tasks.md` | 任务板（含知识库 T5） |
 | `config/cs-runtime.json` | 白名单 / 巡检 / 知识库开关 |
 | `apps/edge-worker/cs-watch.js` | 白名单自动巡检 |
+| `apps/edge-worker/scenario-runner.js` | 运营场景：聊天开站/扫描/安全自动化 |
 | `apps/edge-worker/kb-retrieve.js` | 知识库检索 |
 | `apps/console` | Next 控制台（配置，`:18790`） |
 | `packages/runtime-config` | `cs-runtime.json` 校验 |

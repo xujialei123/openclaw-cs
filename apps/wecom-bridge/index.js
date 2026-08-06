@@ -15,7 +15,20 @@ const path = require("path");
 const AiBot = require("@wecom/aibot-node-sdk");
 const { generateReqId } = require("@wecom/aibot-node-sdk");
 
-const { PROJECT_ROOT, loadRuntimeConfig, generateReply, normalizeReplyResult } = require("../edge-worker/cs-watch.js");
+const {
+  PROJECT_ROOT,
+  loadRuntimeConfig,
+  generateReply,
+  normalizeReplyResult,
+  fireEscalateNotify,
+} = require("../edge-worker/cs-watch.js");
+const escalateNotify = (() => {
+  try {
+    return require("../edge-worker/escalate-notify");
+  } catch {
+    return null;
+  }
+})();
 
 const args = process.argv.slice(2);
 const cfgIdx = args.indexOf("--config");
@@ -158,6 +171,18 @@ async function handleTextFrame(wsClient, cfg, frame) {
     reply = norm.reply || reply;
     if (norm.escalate) {
       reply = reply || "这个问题我先帮您转人工核实，请稍等。";
+    }
+    if (escalateNotify && escalateNotify.shouldNotifyEscalation(norm.escalate, reply)) {
+      fireEscalateNotify(cfg, {
+        platform: "wecom",
+        customer: meta.userid || chatKey,
+        sessionKey: chatKey,
+        shop: meta.chattype === "group" ? `group:${meta.chatid || ""}` : "dm",
+        lastCustomerMsg: text,
+        reply,
+        escalate: !!norm.escalate,
+        reason: norm.escalate ? "escalate" : "reply-mentions-handoff",
+      });
     }
   } catch (e) {
     log("generateReply fail", String(e.message || e).slice(0, 120));

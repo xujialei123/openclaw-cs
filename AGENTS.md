@@ -136,6 +136,8 @@
 需要负责人决定：
 ```
 
+升级须推送负责人：配置中心 `notify.escalate`（企微内部群 Webhook）。见 `apps/edge-worker/escalate-notify.js`、`docs/guide.md`。
+
 ---
 
 ## Red Lines

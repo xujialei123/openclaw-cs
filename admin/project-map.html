@@ -9,16 +9,17 @@
     .doc { max-width: 1100px; }
     .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
     .toc a {
-      font-size: 0.85rem; padding: 5px 10px; border-radius: 999px;
+      font-size: 13px; padding: 5px 10px; border-radius: 999px;
       border: 1px solid var(--line); color: var(--muted); text-decoration: none;
+      background: var(--bg1);
     }
     .toc a:hover { color: var(--text); border-color: var(--accent); }
     .flow {
       font-family: ui-monospace, Consolas, monospace;
-      font-size: 0.8rem; line-height: 1.45;
-      background: var(--code); border: 1px solid var(--line);
-      border-radius: 10px; padding: 14px 16px; overflow-x: auto;
-      white-space: pre; color: #c8d6e5;
+      font-size: 12px; line-height: 1.45;
+      background: var(--code); border: 1px solid #1f2937;
+      border-radius: 8px; padding: 14px 16px; overflow-x: auto;
+      white-space: pre; color: var(--code-fg);
     }
     .lane {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 14px 0;
@@ -26,47 +27,47 @@
     @media (max-width: 900px) { .lane { grid-template-columns: 1fr; } }
     .card {
       background: var(--bg1); border: 1px solid var(--line);
-      border-radius: 10px; padding: 14px 14px 12px;
+      border-radius: 8px; padding: 14px; box-shadow: var(--shadow-sm);
     }
-    .card h3 { margin: 0 0 8px; font-size: 1rem; color: var(--accent2); border: 0; padding: 0; }
-    .card p { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); }
-    .card ul { margin: 0; padding-left: 1.1rem; font-size: 0.88rem; }
+    .card h3 { margin: 0 0 8px; font-size: 15px; color: var(--accent); border: 0; padding: 0; }
+    .card p { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+    .card ul { margin: 0; padding-left: 1.1rem; font-size: 13px; color: #374151; }
     .tag {
-      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      display: inline-block; font-size: 11px; font-weight: 700;
       padding: 2px 7px; border-radius: 999px; margin-right: 6px;
-      background: rgba(61,154,122,.18); color: var(--accent);
+      background: var(--accent-soft); color: var(--accent);
     }
-    .tag.warn { background: rgba(232,165,75,.15); color: var(--accent2); }
-    .tag.brain { background: rgba(99,140,220,.18); color: #8eb4ff; }
-    .tag.path { background: rgba(180,120,220,.15); color: #c9a0ff; }
-    table.files { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 10px 0 18px; }
+    .tag.warn { background: #fffbeb; color: #92400e; }
+    .tag.brain { background: #eff6ff; color: #1d4ed8; }
+    .tag.path { background: #f5f3ff; color: #6d28d9; }
+    table.files { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 18px; background: var(--bg1); }
     table.files th, table.files td {
       border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left;
     }
-    table.files th { background: rgba(36,48,64,.9); color: var(--muted); font-weight: 600; }
+    table.files th { background: var(--bg-muted); color: var(--muted); font-weight: 600; }
     table.files code.path {
-      font-family: ui-monospace, Consolas, monospace; font-size: 0.84em; color: #9fd6c0;
+      font-family: ui-monospace, Consolas, monospace; font-size: 0.84em; color: #0f766e;
     }
-    table.files tr:hover td { background: rgba(61,154,122,.06); }
+    table.files tr:hover td { background: #f0fdfa; }
     .note {
-      margin: 12px 0; padding: 10px 14px; border-left: 3px solid var(--accent2);
-      background: rgba(232,165,75,.08); color: var(--muted); font-size: 0.9rem;
+      margin: 12px 0; padding: 10px 14px; border-left: 3px solid #f59e0b;
+      background: #fffbeb; color: #78350f; font-size: 13px;
     }
     .steps { counter-reset: step; list-style: none; padding: 0; margin: 12px 0; }
     .steps li {
       counter-increment: step; position: relative;
       padding: 12px 12px 12px 52px; margin: 0 0 10px;
-      border: 1px solid var(--line); border-radius: 10px; background: var(--bg1);
+      border: 1px solid var(--line); border-radius: 8px; background: var(--bg1);
     }
     .steps li::before {
       content: counter(step); position: absolute; left: 12px; top: 12px;
       width: 28px; height: 28px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(61,154,122,.2); color: var(--accent); font-weight: 700; font-size: 0.85rem;
+      background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px;
     }
     .steps li strong { color: var(--text); }
     .steps li code { font-size: 0.85em; }
-    .steps .why { display: block; margin-top: 4px; color: var(--muted); font-size: 0.88rem; }
+    .steps .why { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
   </style>
 </head>
 <body>

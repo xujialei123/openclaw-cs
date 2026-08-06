@@ -3,189 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenClaw 客服 · 知识中台网关</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg0: #0f1419; --bg1: #1a222c; --bg2: #243040; --line: #334155;
-      --text: #e8eef6; --muted: #94a3b8; --accent: #3d9a7a; --accent2: #e8a54b;
-      --danger: #e85d5d; --ok: #4ade80; --radius: 10px;
-      --font: "DM Sans", "Noto Sans SC", sans-serif;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh; font-family: var(--font); color: var(--text);
-      background:
-        radial-gradient(900px 480px at 10% -10%, #1e3a32 0%, transparent 55%),
-        radial-gradient(700px 400px at 100% 0%, #3a2a14 0%, transparent 50%),
-        var(--bg0);
-    }
-    header {
-      padding: 28px 32px 12px; border-bottom: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(26,34,44,.95), rgba(26,34,44,.6));
-    }
-    header .brand { font-size: 1.55rem; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
-    header .brand span { color: var(--accent); }
-    header p { margin: 8px 0 0; color: var(--muted); font-size: .95rem; }
-    main {
-      display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px;
-      padding: 20px 32px 40px; max-width: 1280px;
-    }
-    @media (max-width: 960px) {
-      main { grid-template-columns: 1fr; padding: 16px; }
-      header { padding: 20px 16px 12px; }
-    }
-    section {
-      background: var(--bg1); border: 1px solid var(--line);
-      border-radius: var(--radius); padding: 18px;
-    }
-    section h2 { margin: 0 0 12px; font-size: 1.05rem; }
-    .full { grid-column: 1 / -1; }
-    .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-    .stat {
-      background: var(--bg2); border: 1px solid var(--line); border-radius: 8px;
-      padding: 10px 12px; min-width: 120px;
-    }
-    .stat b { display: block; font-size: 1.15rem; }
-    .stat small { color: var(--muted); }
-    label { display: block; font-size: .82rem; color: var(--muted); margin: 10px 0 4px; }
-    input, select, textarea {
-      width: 100%; background: var(--bg0); border: 1px solid var(--line);
-      color: var(--text); border-radius: 8px; padding: 9px 11px; font: inherit;
-    }
-    textarea { min-height: 110px; resize: vertical; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-    button {
-      appearance: none; border: 0; border-radius: 8px; padding: 9px 14px;
-      font: inherit; font-weight: 600; cursor: pointer;
-      background: var(--accent); color: #04140f;
-      transition: background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease, box-shadow .15s ease;
-    }
-    button:hover:not(:disabled) {
-      background: #4cb890;
-      box-shadow: 0 0 0 1px rgba(61,154,122,.35);
-    }
-    button:active:not(:disabled) {
-      background: #348a6c;
-      transform: translateY(1px);
-      box-shadow: none;
-    }
-    button:focus-visible {
-      outline: 2px solid var(--accent2);
-      outline-offset: 2px;
-    }
-    button.secondary {
-      background: var(--bg2); color: var(--text); border: 1px solid var(--line);
-    }
-    button.secondary:hover:not(:disabled) {
-      background: #2c3a4c; border-color: #64748b; color: #fff;
-      box-shadow: none;
-    }
-    button.secondary:active:not(:disabled) {
-      background: #1e293b; border-color: var(--accent); transform: translateY(1px);
-    }
-    button.warn { background: var(--accent2); color: #1a1204; }
-    button.warn:hover:not(:disabled) { background: #f0b85e; box-shadow: none; }
-    button.warn:active:not(:disabled) { background: #d4943a; transform: translateY(1px); }
-    button:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
-    #btnOpenWizard {
-      margin-left: 4px; padding: 6px 12px; font-size: .85rem;
-      border-color: var(--accent); color: var(--accent);
-      background: rgba(61,154,122,.12);
-    }
-    #btnOpenWizard:hover:not(:disabled) {
-      background: rgba(61,154,122,.28); border-color: #4cb890; color: #7ddec0;
-    }
-    #btnOpenWizard:active:not(:disabled) {
-      background: rgba(61,154,122,.4); color: #fff; transform: translateY(1px);
-    }
-    .drop {
-      border: 1.5px dashed var(--line); border-radius: 10px; padding: 22px;
-      text-align: center; color: var(--muted); background: rgba(15,20,25,.45);
-    }
-    .drop.drag { border-color: var(--accent); color: var(--text); background: rgba(61,154,122,.12); }
-    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
-    th { color: var(--muted); font-weight: 500; }
-    .log {
-      margin-top: 12px; background: #0a0e12; border: 1px solid var(--line);
-      border-radius: 8px; padding: 10px 12px; min-height: 72px; max-height: 200px;
-      overflow: auto; font-family: ui-monospace, Consolas, monospace; font-size: .8rem;
-      white-space: pre-wrap; color: #cbd5e1;
-    }
-    .ok { color: var(--ok); } .err { color: #fca5a5; }
-    .chip {
-      display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .75rem;
-      background: var(--bg2); border: 1px solid var(--line);
-    }
-    .chip.on { border-color: var(--ok); color: var(--ok); }
-    .chip.off { border-color: var(--danger); color: #fca5a5; }
-    a { color: var(--accent2); }
-    .hint { color: var(--muted); font-size: .85rem; margin: 0 0 10px; line-height: 1.45; }
-    .env-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
-    @media (max-width: 720px) { .env-grid { grid-template-columns: 1fr; } }
-    .env-field label .tag {
-      margin-left: 6px; font-size: .72rem; color: var(--accent2); font-weight: 500;
-    }
-    /* —— 首次分步引导 —— */
-    .wiz-backdrop {
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(8, 12, 16, .72);
-      display: none; align-items: center; justify-content: center;
-      padding: 20px;
-    }
-    .wiz-backdrop.open { display: flex; }
-    .wiz {
-      width: min(560px, 100%); background: var(--bg1); border: 1px solid var(--line);
-      border-radius: 12px; padding: 22px 24px 18px; box-shadow: 0 16px 48px rgba(0,0,0,.45);
-    }
-    .wiz h2 { margin: 0 0 6px; font-size: 1.2rem; }
-    .wiz .sub { color: var(--muted); font-size: .9rem; margin: 0 0 16px; line-height: 1.45; }
-    .wiz-steps { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
-    .wiz-steps span {
-      flex: 1; min-width: 64px; text-align: center; font-size: .72rem; color: var(--muted);
-      padding: 6px 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg0);
-    }
-    .wiz-steps span.on { color: var(--text); border-color: var(--accent); background: rgba(61,154,122,.15); }
-    .wiz-steps span.done { color: var(--ok); border-color: rgba(74,222,128,.35); }
-    .wiz-pane { display: none; }
-    .wiz-pane.on { display: block; }
-    .wiz-pane label { margin-top: 12px; }
-    .wiz-err { color: #fca5a5; font-size: .85rem; margin-top: 10px; min-height: 1.2em; }
-    .wiz-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; align-items: center; }
-    .wiz-foot .right { display: flex; gap: 8px; }
-    .btn-link {
-      background: transparent; border: 0; color: var(--muted); font-weight: 500;
-      padding: 8px 4px; cursor: pointer; font: inherit;
-      transition: color .15s ease;
-    }
-    .btn-link:hover { color: var(--text); background: transparent; box-shadow: none; }
-    .btn-link:active { color: var(--accent); transform: none; }
-    .setup-banner {
-      display: none; margin: 0 32px 0; padding: 12px 14px; border-radius: 8px;
-      border: 1px solid rgba(232,165,75,.45); background: rgba(232,165,75,.1);
-      color: var(--text); font-size: .9rem; align-items: center; justify-content: space-between; gap: 12px;
-    }
-    .setup-banner.show { display: flex; }
-    @media (max-width: 960px) { .setup-banner { margin: 0 16px; flex-wrap: wrap; } }
-  </style>
+  <title>OpenClaw 客服 · 配置中心</title>
+  <link rel="stylesheet" href="/docs.css" />
+  <link rel="stylesheet" href="/config.css" />
 </head>
 <body>
-  <header>
-    <nav class="topnav" style="padding:0 0 12px;border:0;background:transparent;position:static">
-      <a class="on" href="/" style="color:#04140f;background:var(--accent);border-color:var(--accent);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px">配置台</a>
-      <a href="/guide" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">使用教程</a>
-      <a href="/dev-flow" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">研发流程</a>
-      <a href="/project-map" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">项目全景</a>
-      <a href="/deploy" style="color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:8px;font-weight:600;margin-right:6px;border:1px solid var(--line)">生产交付</a>
+  <header class="config-header">
+    <nav class="topnav">
+      <a class="on" href="/">配置台</a>
+      <a href="/guide">使用教程</a>
+      <a href="/dev-flow">研发流程</a>
+      <a href="/project-map">项目全景</a>
+      <a href="/deploy">生产交付</a>
       <button type="button" class="secondary" id="btnOpenWizard">分步引导配置</button>
     </nav>
-    <h1 class="brand">OpenClaw <span>知识中台网关</span></h1>
-    <p>企业向量库在骨架 <code>rag-service:8787</code>（Postgres/pgvector + llm-wiki）。本页只做配置与转发，不存生产向量。首次使用请先看 <a href="/guide">使用教程</a>；研发看 <a href="/dev-flow">流程</a>；目录职责看 <a href="/project-map">项目全景</a>；最终交付看 <a href="/deploy">生产部署</a>。</p>
+    <h1 class="brand">OpenClaw <span>配置中心</span></h1>
+    <p>管理白名单、知识库转发、查单与环境变量。向量库在 <code>rag-service:8787</code>。首次使用请先看 <a href="/guide">使用教程</a>；目录职责看 <a href="/project-map">项目全景</a>；交付看 <a href="/deploy">生产部署</a>。</p>
   </header>
   <div class="setup-banner" id="setupBanner">
     <span>检测到尚未完成基础配置（便携包路径 / 中台地址）。建议先走一遍分步引导。</span>
@@ -279,8 +112,8 @@
     </div>
   </div>
 
-  <main>
-    <section>
+  <main class="config-main">
+    <section class="card">
       <h2>中台状态</h2>
       <div class="stats" id="stats"></div>
       <p style="color:var(--muted);font-size:.9rem;margin:0">
@@ -294,7 +127,7 @@
       <div class="log" id="log">就绪。</div>
     </section>
 
-    <section>
+    <section class="card">
       <h2>上传并编译（转发 8787）</h2>
       <div class="drop" id="drop">拖拽 .md / .txt，或点击选择（上传后自动 ingest + compile-brain）</div>
       <input type="file" id="file" accept=".md,.txt,text/markdown,text/plain" multiple hidden />
@@ -309,7 +142,7 @@
       </div>
     </section>
 
-    <section class="full">
+    <section class="card full">
       <h2>中台文件列表</h2>
       <div style="overflow:auto;max-height:240px">
         <table>
@@ -319,7 +152,7 @@
       </div>
     </section>
 
-    <section>
+    <section class="card">
       <h2>检索试跑</h2>
       <label>顾客问句</label>
       <input type="text" id="query" placeholder="这个套餐可以洗哪些东西？" />
@@ -327,7 +160,7 @@
       <div class="log" id="searchOut">—</div>
     </section>
 
-    <section>
+    <section class="card">
       <h2>边端运行配置</h2>
       <p class="hint">监听关 = 该平台本轮不巡检；自动发送关 = 仍可识别/生成回复但只进 pending 不发出。保存后下个 tick 生效，无需重启。</p>
       <div class="row">
@@ -478,7 +311,37 @@
       </div>
     </section>
 
-    <section class="full">
+    <section class="card full">
+      <h2>升级通知 · 企微群</h2>
+      <p class="hint">转人工时推送到<strong>企微内部群</strong>。开关与 Webhook <strong>只在本页配置</strong>（写入 <code>cs-runtime.json</code>）。获取地址：内部群 → 右上角 ··· → 添加群机器人 → 复制 Webhook。</p>
+      <div class="row3">
+        <div>
+          <label>启用推送</label>
+          <select id="escNotifyEnabled">
+            <option value="false">关</option>
+            <option value="true">开</option>
+          </select>
+        </div>
+        <div>
+          <label>冷却秒数（同顾客）</label>
+          <input type="number" id="escNotifyCooldown" min="0" max="86400" step="30" value="300" />
+        </div>
+        <div>
+          <label>@所有人</label>
+          <select id="escNotifyMentionAll">
+            <option value="false">否</option>
+            <option value="true">是</option>
+          </select>
+        </div>
+      </div>
+      <label>通知标题</label>
+      <input type="text" id="escNotifyTitle" placeholder="客服升级人工" />
+      <label>Webhook 地址</label>
+      <input type="text" id="escNotifyWebhook" autocomplete="off" spellcheck="false" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…" />
+      <p class="hint">启用=开 且地址非空才会推送。点上方「保存到 cs-runtime.json」一并保存；巡检热读，下个消息生效。</p>
+    </section>
+
+    <section class="card full">
       <h2>环境变量（.env）</h2>
       <p class="hint" id="envNote">可在此改边端 / 中台常用变量；密钥字段不回传明文，留空=不修改。保存后需重启 Start-All（及 rag-service）才完全生效。</p>
       <div class="row" style="align-items:start">
@@ -634,6 +497,12 @@
       $("orderIntentMode").value = ord.intentMode || "ai+rules";
       $("orderBaseUrl").value = ord.baseUrl || "";
       $("orderUrlIncludes").value = ord.urlIncludes || "";
+      const esc = s.config?.notify?.escalate || {};
+      $("escNotifyEnabled").value = String(esc.enabled === true);
+      $("escNotifyCooldown").value = esc.cooldownSec ?? 300;
+      $("escNotifyMentionAll").value = String(esc.mentionAll === true);
+      $("escNotifyTitle").value = esc.title || "客服升级人工";
+      $("escNotifyWebhook").value = esc.wecomWebhookUrl || "";
       $("orderPathIncludes").value = ord.pathIncludes || "";
       $("orderMaxResults").value = ord.maxResults ?? 5;
       $("orderFreeText").value = String(ord.freeTextKeyword !== false);
@@ -743,9 +612,19 @@
                 },
               },
             },
+            notify: {
+              escalate: {
+                enabled: $("escNotifyEnabled").value === "true",
+                channel: "wecom_webhook",
+                wecomWebhookUrl: $("escNotifyWebhook").value.trim(),
+                cooldownSec: Number($("escNotifyCooldown").value) || 300,
+                mentionAll: $("escNotifyMentionAll").value === "true",
+                title: $("escNotifyTitle").value.trim() || "客服升级人工",
+              },
+            },
           }),
         });
-        log("配置已保存（监听/发送/查单下个 tick 生效）", "ok");
+        log("配置已保存（监听/发送/查单/升级通知下个 tick 生效）", "ok");
       } catch (e) { log(e.message, "err"); }
     };
     $("btnLocalParse").onclick = async () => {

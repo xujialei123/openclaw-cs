@@ -123,8 +123,19 @@ if (-not $SkipOpenSites) {
   $runtime = Get-Content $Cfg -Raw -Encoding UTF8 | ConvertFrom-Json
   $mt = $runtime.platforms.meituan.openUrl
   $dy = $runtime.platforms.douyin.openUrl
-  if ($mt) { & $Node $OpenClawMjs browser open $mt 2>$null | Out-Null }
-  if ($dy) { & $Node $OpenClawMjs browser open $dy 2>$null | Out-Null }
+  # OpenClaw SSRF 策略可能拦导航；失败不阻断 cs-watch（可在 openclaw.json browser.ssrfPolicy 放行）
+  foreach ($site in @($mt, $dy)) {
+    if (-not $site) { continue }
+    $prevEap2 = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $Node $OpenClawMjs browser open $site 2>&1 | ForEach-Object {
+      $line = "$_"
+      if ($line -match "blocked by policy|GatewayClientRequestError") {
+        Write-Warning ("browser open blocked (check openclaw.json browser.ssrfPolicy): {0}" -f $site)
+      }
+    } | Out-Null
+    $ErrorActionPreference = $prevEap2
+  }
   Start-Sleep -Seconds 2
 }
 
