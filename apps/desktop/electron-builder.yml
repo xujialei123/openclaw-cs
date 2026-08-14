@@ -1,6 +1,8 @@
 appId: com.openclaw.cs.desktop
-productName: OpenClaw客服一体端
-# ASCII exe name — Chinese productName makes NSIS "app cannot be closed" false-positive
+# ASCII productName — Chinese name alone makes NSIS dialogs awkward; shortcut keeps Chinese.
+productName: OpenClaw-CS
+# Keep exe short & exact; installer artifact MUST NOT contain this stem as substring
+# (electron-builder substring match: OpenClaw-CS-Setup*.exe → false "cannot be closed").
 executableName: OpenClaw-CS
 copyright: OpenClaw CS
 directories:
@@ -25,7 +27,8 @@ win:
     - target: nsis
       arch:
         - x64
-  artifactName: OpenClaw-CS-Setup-${version}-${arch}.${ext}
+  # Deliberately NOT "OpenClaw-CS-Setup-*" — that substring-matches OpenClaw-CS.exe
+  artifactName: OpenClawDesktop-Setup-${version}-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false
@@ -36,3 +39,4 @@ nsis:
   language: 2052
   # relative to buildResources (apps/desktop/build)
   include: installer.nsh
+

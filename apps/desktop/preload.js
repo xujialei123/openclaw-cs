@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld("desktopApi", {
   openExternalAdmin: () => ipcRenderer.invoke("desktop:open-admin"),
   reloadAdmin: () => ipcRenderer.invoke("desktop:reload-admin"),
   pickPortable: () => ipcRenderer.invoke("desktop:pick-portable"),
+  browsePortable: () => ipcRenderer.invoke("desktop:browse-portable"),
+  getSetup: () => ipcRenderer.invoke("desktop:get-setup"),
+  saveSetup: (body) => ipcRenderer.invoke("desktop:save-setup", body),
   getPrefs: () => ipcRenderer.invoke("desktop:get-prefs"),
   setPrefs: (patch) => ipcRenderer.invoke("desktop:set-prefs", patch),
   onStatus: (cb) => {

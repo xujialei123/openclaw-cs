@@ -1,6 +1,6 @@
 {
   "name": "openclaw-desktop",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": true,
   "description": "OpenClaw CS desktop shell (tray + embedded admin console)",
   "main": "main.js",

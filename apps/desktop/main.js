@@ -190,8 +190,113 @@ function loadPrefs() {
   try {
     return JSON.parse(fs.readFileSync(PREFS_FILE, "utf8"));
   } catch {
-    return { autoStartOnLaunch: true, firstRunDone: false };
+    return { autoStartOnLaunch: true, firstRunDone: false, setupCompleted: false };
   }
+}
+
+function readRuntimeJson() {
+  const p = path.join(PROJECT_ROOT, "config", "cs-runtime.json");
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function writeRuntimePatch(patch) {
+  const p = path.join(PROJECT_ROOT, "config", "cs-runtime.json");
+  const example = path.join(PROJECT_ROOT, "config", "cs-runtime.example.json");
+  let rt = {};
+  if (fs.existsSync(p)) {
+    try {
+      rt = JSON.parse(fs.readFileSync(p, "utf8"));
+    } catch {
+      rt = {};
+    }
+  } else if (fs.existsSync(example)) {
+    try {
+      rt = JSON.parse(fs.readFileSync(example, "utf8"));
+    } catch {
+      rt = {};
+    }
+  }
+  const next = { ...rt, ...patch };
+  if (patch.knowledge) {
+    next.knowledge = { ...(rt.knowledge || {}), ...patch.knowledge };
+    if (patch.knowledge.rag) {
+      next.knowledge.rag = { ...(rt.knowledge?.rag || {}), ...patch.knowledge.rag };
+    }
+  }
+  if (patch.setup) next.setup = { ...(rt.setup || {}), ...patch.setup };
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(next, null, 2) + "\n", "utf8");
+  return next;
+}
+
+/** 一体端启动前：未完成引导且缺便携包/中台地址 → 强制 onboarding */
+function computeDesktopSetupState() {
+  const prefs = loadPrefs();
+  const rt = readRuntimeJson();
+  const portable = currentPortableRoot();
+  const portableOk = isPortableOk(portable);
+  const ragFromEnv = String(process.env.RAG_BASE_URL || "").trim();
+  const ragFromRt = String(rt?.knowledge?.rag?.baseUrl || "").trim();
+  const ragUrl = (ragFromEnv || ragFromRt || "").replace(/\/$/, "");
+  const ragOk = !!ragUrl;
+  const wizardCompleted =
+    prefs.setupCompleted === true || rt?.setup?.wizardCompleted === true;
+  const reasons = [];
+  if (!portableOk) reasons.push("缺少有效的 OpenClaw 便携包路径");
+  if (!ragOk) reasons.push("缺少中台地址 RAG_BASE_URL");
+  // 缺便携包或中台地址 → 一体端强制全屏引导，并禁止「启动全部」
+  const needsSetup = !portableOk || !ragOk;
+  return {
+    needsSetup,
+    wizardCompleted,
+    reasons,
+    deployRole: String(process.env.DEPLOY_ROLE || "all").trim() || "all",
+    portableRoot: portable,
+    portableOk,
+    ragBaseUrl: ragUrl || "http://127.0.0.1:8787",
+    ragKeySet: !!String(process.env.RAG_API_KEY || rt?.knowledge?.rag?.apiKey || "").trim(),
+    packaged: app.isPackaged,
+  };
+}
+
+function applySetupConfig(body) {
+  const deployRole = String(body?.deployRole || "all").trim() || "all";
+  const portable = String(body?.portableRoot || "").trim();
+  const ragUrl = String(body?.ragBaseUrl || "").trim().replace(/\/$/, "");
+  const ragKey = body?.ragApiKey != null ? String(body.ragApiKey) : "";
+  if (!ragUrl) throw new Error("请填写中台地址 RAG_BASE_URL");
+  if (portable) {
+    if (!isPortableOk(portable) && !app.isPackaged) {
+      throw new Error(`便携包无效，缺少：${portableNodePath(portable)}`);
+    }
+    upsertEnvVar("OPENCLAW_PORTABLE_ROOT", portable);
+    PORTABLE_ROOT = portable;
+  } else if (!isPortableOk(currentPortableRoot())) {
+    throw new Error("请选择有效的 OpenClaw 便携包目录");
+  }
+  upsertEnvVar("DEPLOY_ROLE", deployRole);
+  upsertEnvVar("RAG_BASE_URL", ragUrl);
+  if (ragKey) upsertEnvVar("RAG_API_KEY", ragKey);
+  writeRuntimePatch({
+    knowledge: {
+      mode: "remote",
+      rag: {
+        baseUrl: ragUrl,
+        ...(ragKey ? { apiKey: ragKey } : {}),
+      },
+    },
+    setup: {
+      wizardCompleted: true,
+      completedAt: new Date().toISOString(),
+      via: "desktop-onboarding",
+    },
+  });
+  savePrefs({ ...loadPrefs(), setupCompleted: true, firstRunDone: true, loginHintShown: true });
+  return computeDesktopSetupState();
 }
 
 function savePrefs(prefs) {
@@ -262,12 +367,13 @@ async function collectStatus() {
   const portableOk = isPortableOk(PORTABLE_ROOT);
   const flags = { admin, gateway, cdp, rag, watch, wecom };
   const readyCount = Object.values(flags).filter(Boolean).length;
+  const setup = computeDesktopSetupState();
   statusCache = {
     ...flags,
     portableOk,
     dockerOk: !!statusCache.dockerOk,
     adminUrl: ADMIN_URL,
-    ragUrl: `${RAG_BASE}/health`,
+    ragUrl: `${(setup.ragBaseUrl || RAG_BASE).replace(/\/$/, "")}/health`,
     gatewayUrl: GATEWAY_URL,
     cdpUrl: CDP_URL,
     portableRoot: PORTABLE_ROOT,
@@ -279,6 +385,8 @@ async function collectStatus() {
     autoStartOnLaunch: prefs.autoStartOnLaunch !== false,
     readyCount,
     totalCount: 6,
+    needsSetup: setup.needsSetup,
+    setup,
   };
   if (tray && !tray.isDestroyed()) {
     const tip = starting
@@ -565,7 +673,7 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 680,
     title: "OpenClaw 客服一体端",
-    backgroundColor: "#0f1419",
+    backgroundColor: "#f3f4f6",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -743,6 +851,10 @@ async function maybeAutoStart() {
   autoStartedOnce = true;
   const prefs = loadPrefs();
   if (prefs.autoStartOnLaunch === false) return;
+  if (computeDesktopSetupState().needsSetup) {
+    appendLog("skip auto-start: setup incomplete — complete onboarding first");
+    return;
+  }
   if (!isPortableOk(currentPortableRoot())) return;
   const s = await collectStatus();
   if (s.admin || s.watch || s.gateway) return;
@@ -752,7 +864,12 @@ async function maybeAutoStart() {
 
 function registerIpc() {
   ipcMain.handle("desktop:status", () => collectStatus());
-  ipcMain.handle("desktop:start", () => ipcStartAll());
+  ipcMain.handle("desktop:start", async () => {
+    if (computeDesktopSetupState().needsSetup) {
+      return { ok: false, error: "请先完成启动配置引导", needsSetup: true };
+    }
+    return ipcStartAll();
+  });
   ipcMain.handle("desktop:stop", () => ipcStopAll());
   ipcMain.handle("desktop:open-logs", () => {
     fs.mkdirSync(MEMORY_DIR, { recursive: true });
@@ -773,6 +890,27 @@ function registerIpc() {
     return ADMIN_URL;
   });
   ipcMain.handle("desktop:pick-portable", () => ensurePortableConfigured());
+  ipcMain.handle("desktop:browse-portable", async () => {
+    const picked = await dialog.showOpenDialog({
+      title: "选择 OpenClaw 便携包根目录",
+      properties: ["openDirectory"],
+    });
+    if (picked.canceled || !picked.filePaths?.[0]) return { ok: false, cancelled: true };
+    const dir = picked.filePaths[0];
+    if (!isPortableOk(dir)) {
+      return { ok: false, error: `目录无效，缺少：${portableNodePath(dir)}`, path: dir };
+    }
+    return { ok: true, path: dir };
+  });
+  ipcMain.handle("desktop:get-setup", () => computeDesktopSetupState());
+  ipcMain.handle("desktop:save-setup", (_e, body) => {
+    try {
+      const setup = applySetupConfig(body || {});
+      return { ok: true, setup };
+    } catch (e) {
+      return { ok: false, error: e.message || String(e) };
+    }
+  });
   ipcMain.handle("desktop:get-prefs", () => loadPrefs());
   ipcMain.handle("desktop:set-prefs", (_e, patch) => {
     const next = { ...loadPrefs(), ...(patch || {}) };
@@ -808,7 +946,10 @@ if (!gotLock) {
     registerIpc();
     createWindow();
     createTray();
-    await ensurePortableConfigured();
+    // 未完成引导时不弹系统对话框抢焦点，交给一体端内 onboarding
+    if (!computeDesktopSetupState().needsSetup) {
+      await ensurePortableConfigured();
+    }
     await collectStatus();
     setInterval(() => {
       collectStatus().catch(() => {});

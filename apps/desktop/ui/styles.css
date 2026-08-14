@@ -510,3 +510,228 @@ code {
     border-bottom: 1px solid var(--border-light);
   }
 }
+
+/* —— Onboarding（首次配置） —— */
+.onboard {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: rgba(17, 24, 39, 0.48);
+}
+
+.onboard[hidden] {
+  display: none !important;
+}
+
+.onboard-card {
+  width: min(520px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.onboard-brand {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+.onboard-brand strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.onboard-sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.onboard-steps {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.onboard-steps span {
+  flex: 1;
+  min-width: 72px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 6px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: var(--bg-muted);
+}
+
+.onboard-steps span.on {
+  color: #115e59;
+  border-color: #99f6e4;
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.onboard-steps span.done {
+  color: var(--ok);
+  border-color: #a7f3d0;
+}
+
+.onboard-pane {
+  display: none;
+}
+
+.onboard-pane.on {
+  display: block;
+}
+
+.onboard-pane .hint {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.onboard-pane label:not(.role-card) {
+  display: block;
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text);
+}
+
+.onboard-pane input[type="text"],
+.onboard-pane input[type="password"] {
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.onboard-pane input:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.role-card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  margin-bottom: var(--space-2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-muted);
+  cursor: pointer;
+}
+
+.role-card:has(input:checked) {
+  border-color: #99f6e4;
+  background: var(--accent-soft);
+}
+
+.role-card input {
+  margin-top: 3px;
+}
+
+.role-card strong {
+  display: block;
+  font-size: 14px;
+}
+
+.role-card small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.path-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.path-row input {
+  flex: 1;
+}
+
+.onboard-summary {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.onboard-summary dt {
+  color: var(--muted);
+  margin-top: var(--space-2);
+}
+
+.onboard-summary dt:first-child {
+  margin-top: 0;
+}
+
+.onboard-summary dd {
+  margin: 2px 0 0;
+  word-break: break-all;
+}
+
+.onboard-next {
+  margin: var(--space-3) 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.onboard-err {
+  min-height: 1.2em;
+  margin: var(--space-3) 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.onboard-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.onboard-foot-right {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-link {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 4px;
+}
+
+.btn-link:hover {
+  color: var(--text);
+}
+
+.app.setup-locked .btn-primary {
+  opacity: 0.55;
+}

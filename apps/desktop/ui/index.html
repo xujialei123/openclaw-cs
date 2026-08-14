@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app">
+    <div class="app" id="appShell">
       <header class="topbar">
         <div class="brand">
           <span class="mark" aria-hidden="true">OC</span>
@@ -99,6 +99,81 @@
             </div>
           </div>
         </main>
+      </div>
+    </div>
+
+    <!-- 首次 / 未配置：全屏引导（产品级 onboarding） -->
+    <div class="onboard" id="onboard" hidden>
+      <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="obTitle">
+        <div class="onboard-brand">
+          <span class="mark" aria-hidden="true">OC</span>
+          <div>
+            <strong id="obTitle">欢迎使用 OpenClaw 客服一体端</strong>
+            <p class="onboard-sub">开始前请完成基础配置。保存后即可启动服务。</p>
+          </div>
+        </div>
+
+        <div class="onboard-steps" id="obSteps" aria-label="配置步骤">
+          <span data-i="0">1 角色</span>
+          <span data-i="1">2 运行时</span>
+          <span data-i="2">3 中台</span>
+          <span data-i="3">4 确认</span>
+        </div>
+
+        <div class="onboard-pane on" data-step="0">
+          <p class="hint">这台电脑怎么用？</p>
+          <label class="role-card">
+            <input type="radio" name="obRole" value="all" checked />
+            <span>
+              <strong>本机全栈（联调 / 单机试点）</strong>
+              <small>本机可起 Docker + 知识库；适合你自己这台当中台。</small>
+            </span>
+          </label>
+          <label class="role-card">
+            <input type="radio" name="obRole" value="edge" />
+            <span>
+              <strong>仅边端（连同事 / 服务器中台）</strong>
+              <small>不跑本机库；填写对方中台地址即可自动回复。</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="onboard-pane" data-step="1">
+          <p class="hint">OpenClaw 便携包提供 Gateway 与托管浏览器。安装版若已内置可直接下一步。</p>
+          <label for="obPortable">便携包路径</label>
+          <div class="path-row">
+            <input type="text" id="obPortable" placeholder="例如 F:\OpenClaw-USB-Portable" spellcheck="false" />
+            <button type="button" class="btn" id="obBrowse">浏览…</button>
+          </div>
+          <p class="hint" id="obPortableHint"></p>
+        </div>
+
+        <div class="onboard-pane" data-step="2">
+          <p class="hint">边端通过 HTTP 访问知识中台。本机全栈一般填本机 8787；连别人的中台填局域网 IP。</p>
+          <label for="obRagUrl">中台地址 RAG_BASE_URL</label>
+          <input type="text" id="obRagUrl" placeholder="http://127.0.0.1:8787" spellcheck="false" />
+          <label for="obRagKey">API Key（可选，留空不改已有密钥）</label>
+          <input type="password" id="obRagKey" placeholder="与中台 brain/.env 中 RAG_API_KEY 一致" autocomplete="off" />
+        </div>
+
+        <div class="onboard-pane" data-step="3">
+          <p class="hint">确认后写入本机 .env 与运行配置。白名单、知识库可在启动后于右侧配置中心继续设置。</p>
+          <dl class="onboard-summary" id="obSummary"></dl>
+          <ul class="hint onboard-next">
+            <li>保存后点击「启动全部」</li>
+            <li>在橙框浏览器登录美团 / 抖音</li>
+            <li>需要细调时打开右侧配置中心</li>
+          </ul>
+        </div>
+
+        <p class="onboard-err" id="obErr" role="alert"></p>
+        <div class="onboard-foot">
+          <button type="button" class="btn-link" id="obReopen" hidden>重新打开引导</button>
+          <div class="onboard-foot-right">
+            <button type="button" class="btn" id="obPrev" disabled>上一步</button>
+            <button type="button" class="btn btn-primary" id="obNext">下一步</button>
+          </div>
+        </div>
       </div>
     </div>
 

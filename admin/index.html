@@ -30,7 +30,7 @@
       <h2 id="wizTitle">首次配置引导</h2>
       <p class="sub">按步骤填完即可开始用。随时可点右上角「分步引导配置」重来。</p>
       <div class="wiz-steps" id="wizSteps">
-        <span data-i="0">1 路径</span>
+        <span data-i="0">1 角色与路径</span>
         <span data-i="1">2 平台</span>
         <span data-i="2">3 回复范围</span>
         <span data-i="3">4 查单</span>
@@ -38,11 +38,16 @@
       </div>
 
       <div class="wiz-pane on" data-step="0">
-        <p class="hint">OpenClaw 便携包目录，以及知识中台地址（本机联调一般是 8787）。</p>
+        <p class="hint">一体端启动时若未配置会先全屏引导；此处可随时重来。本机全栈 / 仅边端决定是否连远程中台。</p>
+        <label>DEPLOY_ROLE</label>
+        <select id="wizDeployRole">
+          <option value="all">all · 本机全栈</option>
+          <option value="edge">edge · 仅边端（连远程中台）</option>
+        </select>
         <label>OPENCLAW_PORTABLE_ROOT（便携包路径）</label>
         <input type="text" id="wizPortable" placeholder="例如 D:\OpenClaw-USB-Portable" />
         <label>RAG_BASE_URL（中台地址）</label>
-        <input type="text" id="wizRagUrl" placeholder="http://127.0.0.1:8787" />
+        <input type="text" id="wizRagUrl" placeholder="http://127.0.0.1:8787 或 http://同事IP:8787" />
         <label>RAG_API_KEY（可选，留空不改已有密钥）</label>
         <input type="password" id="wizRagKey" placeholder="已设置则留空" autocomplete="off" />
       </div>
@@ -103,7 +108,7 @@
 
       <div class="wiz-err" id="wizErr"></div>
       <div class="wiz-foot">
-        <button type="button" class="btn-link" id="wizSkip">稍后再说</button>
+        <button type="button" class="btn-link" id="wizSkip" title="仅配置中心内可暂缓；一体端未完成引导前无法启动">稍后再说</button>
         <div class="right">
           <button type="button" class="secondary" id="wizPrev">上一步</button>
           <button type="button" id="wizNext">下一步</button>
@@ -676,6 +681,10 @@
       // 从当前表单/环境预填
       const portable = $("env_OPENCLAW_PORTABLE_ROOT");
       const ragUrl = $("env_RAG_BASE_URL");
+      const deploy = $("env_DEPLOY_ROLE");
+      if ($("wizDeployRole")) {
+        $("wizDeployRole").value = (deploy && deploy.value) || "all";
+      }
       $("wizPortable").value = (portable && portable.value) || "";
       $("wizRagUrl").value = ($("ragBase") && $("ragBase").value) || (ragUrl && ragUrl.value) || "http://127.0.0.1:8787";
       $("wizRagKey").value = "";
@@ -704,6 +713,7 @@
       const edgePatch = {
         OPENCLAW_PORTABLE_ROOT: portable,
         RAG_BASE_URL: ragUrl,
+        DEPLOY_ROLE: ($("wizDeployRole") && $("wizDeployRole").value) || "all",
       };
       const key = $("wizRagKey").value;
       if (key) edgePatch.RAG_API_KEY = key;
@@ -780,7 +790,10 @@
       const s = await api("/api/status");
       if (s.needsSetup) {
         $("setupBanner").classList.add("show");
+        $("wizSkip").hidden = true;
         openWizard();
+      } else {
+        $("wizSkip").hidden = false;
       }
     }
     boot().catch((e) => log(e.message, "err"));

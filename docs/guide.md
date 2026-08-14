@@ -46,7 +46,9 @@
 
 也可在边端配置页底部 **「环境变量（.env）」** 编辑常用项（`http://127.0.0.1:18790/`）：
 
-- **首次 / 未配好时**：配置台会自动弹出 **分步引导**（路径 → 平台 → 白名单 → 查单 → 完成）；也可点顶栏「分步引导配置」重来
+- **首次 / 未配好时**：
+  - **一体端**：缺便携包或中台地址时，启动后**先全屏引导**（角色 → 运行时 → 中台 → 确认），未完成前不能「启动全部」。
+  - **配置中心**：管理台就绪后仍可点「分步引导配置」细调平台/白名单/查单。
 - 只暴露白名单字段（路径、`DEPLOY_ROLE`、`RAG_*`、`EMBEDDING_*`、`DATABASE_URL` 等）
 - 密钥 GET 不回传明文；保存时**留空 = 不修改**
 - 保存 `RAG_BASE_URL` / `RAG_API_KEY` 时会同步进 `cs-runtime.json`
@@ -128,12 +130,15 @@ npm run stop
 
 ```powershell
 npm run desktop:dist
-# 产物：dist-pack/desktop/OpenClaw-CS-Setup-*.exe
+# 产物：dist-pack/desktop/OpenClawDesktop-Setup-*.exe（0.2.4+；勿用旧的 OpenClaw-CS-Setup 名）
 ```
 
 装机后直接「启动全部」，再在托管浏览器扫码登录即可。若打包时加 `-SkipPortable`，则需手动选便携包目录。
 
-覆盖安装前先从托盘退出一体端。若安装器提示「无法关闭」：多半是**旧目录里的 portable `node.exe` 还在跑**（不是主程序关不掉）。取消安装 → 任务管理器结束所有路径含 `openclaw-portable` 的 `node.exe` → 删掉旧安装目录 → 用 **0.2.3+** 重装到短路径如 `F:\OpenClawCS`。
+覆盖安装前先从托盘退出一体端。若安装器提示「无法关闭」：
+
+1. **0.2.3 假阳性（常见）**：安装包名 `OpenClaw-CS-Setup-*.exe` 被子串当成 `OpenClaw-CS.exe` 仍在运行。请用 **0.2.4+** 的 `OpenClawDesktop-Setup-*.exe`（已改名避开）。
+2. 真占用：任务管理器结束 `OpenClaw-CS.exe` 与路径含 `openclaw-portable` 的 `node.exe` → 删旧安装目录 → 装到短路径如 `F:\OpenClawCS`。
 
 启动顺序：
 

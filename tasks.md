@@ -51,7 +51,7 @@
 | TP.9 | `[x]` | 启动带使用教程 + 研发流程页 | `/guide` `/dev-flow`；新功能必须同步文档（AGENTS） |
 | TP.10 | `[~]` | **形态自检**：边端可只连远程中台（本机可不跑库） | `DEPLOY_ROLE=edge` + `RAG_BASE_URL`；`-SkipDocker` |
 | TP.11 | `[x]` | 配置样例拆分：`cs-runtime.json`（联调）/ `cs-runtime.prod.example.json` | prod：`fallbackLocal=false`、远程 baseUrl |
-| TP.12 | `[x]` | 转人工推企微内部群 Webhook | `notify.escalate` / `WECOM_ESCALATE_WEBHOOK_URL`；日志 `ESCALATE_NOTIFY ok` |
+| TP.13 | `[x]` | 一体端未配置时强制启动引导（产品级 UI） | 缺便携包/`RAG_BASE_URL` 全屏引导；保存写 `.env`；拦启动/自动启动 |
 
 ---
 

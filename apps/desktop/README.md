@@ -17,7 +17,7 @@ npm run desktop
 npm run desktop:dist
 ```
 
-产物：`dist-pack/desktop/OpenClaw-CS-Setup-*.exe`（体积会明显变大，因含 Node/OpenClaw 运行时）
+产物：`dist-pack/desktop/OpenClawDesktop-Setup-*.exe`（体积会明显变大，因含 Node/OpenClaw 运行时）
 
 只要业务、不要便携包：
 
@@ -28,7 +28,8 @@ powershell -File scripts\Pack-Desktop.ps1 -SkipPortable
 ## 安装注意
 
 - 覆盖安装前请先**关闭一体端窗口**（会自动 Stop-All）或托盘「退出」。
-- 若安装器提示「无法关闭」：先结束路径含 `openclaw-portable` 的 `node.exe`，再删旧目录；推荐装到 `F:\OpenClawCS`。0.2.3+ 安装前会杀 portable 进程并清空 `$INSTDIR`。
+- 首次启动若缺便携包或中台地址，会先进入**全屏配置引导**，完成前无法「启动全部」。
+- 若安装器提示「无法关闭」：0.2.3 及更早安装包名 `OpenClaw-CS-Setup-*` 会和 `OpenClaw-CS.exe` 子串误匹配（安装器把自己当成未关闭的 App）。请改用 **0.2.4+** 的 `OpenClawDesktop-Setup-*.exe`；临时可取消安装 → 任务管理器结束 `OpenClaw-CS.exe` 与 `*Setup*` → 删旧目录后重装到短路径如 `F:\OpenClawCS`。
 
 ## 装机后
 
