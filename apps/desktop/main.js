@@ -30,7 +30,52 @@ const MEMORY_DIR = path.join(PROJECT_ROOT, "memory");
 const DESKTOP_LOG = path.join(MEMORY_DIR, "desktop.log");
 const PREFS_FILE = path.join(MEMORY_DIR, "desktop-prefs.json");
 const ENV_FILE = path.join(PROJECT_ROOT, ".env");
+const PRODUCT_PROFILE_FILE = path.join(__dirname, "product-profile.json");
 
+function loadProductProfile() {
+  const fallback = {
+    packageKind: "fullstack",
+    deployRole: "all",
+    displayName: "智能客服",
+    editionLabel: "全栈版",
+    roleLocked: false,
+  };
+  try {
+    if (!fs.existsSync(PRODUCT_PROFILE_FILE)) return fallback;
+    const raw = JSON.parse(fs.readFileSync(PRODUCT_PROFILE_FILE, "utf8"));
+    const kind =
+      String(raw.packageKind || "").toLowerCase() === "edge" ? "edge" : "fullstack";
+    const deployRole =
+      kind === "edge" || String(raw.deployRole || "").toLowerCase() === "edge"
+        ? "edge"
+        : "all";
+    return {
+      packageKind: kind,
+      deployRole,
+      displayName: String(raw.displayName || "智能客服").trim() || "智能客服",
+      editionLabel:
+        String(raw.editionLabel || (kind === "edge" ? "边端版" : "全栈版")).trim() ||
+        (kind === "edge" ? "边端版" : "全栈版"),
+      // 安装包内锁定；开发态默认不锁，可用 .env DEPLOY_ROLE
+      roleLocked: app.isPackaged ? true : raw.roleLocked === true,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function resolveDeployRole() {
+  const profile = loadProductProfile();
+  if (profile.roleLocked || app.isPackaged) return profile.deployRole;
+  const fromEnv = String(process.env.DEPLOY_ROLE || "").trim().toLowerCase();
+  if (fromEnv === "edge" || fromEnv === "all") return fromEnv;
+  return profile.deployRole;
+}
+
+function productTitle() {
+  const profile = loadProductProfile();
+  return `${profile.displayName} · ${profile.editionLabel}`;
+}
 function loadDotEnv(file) {
   if (!fs.existsSync(file)) return;
   const text = fs.readFileSync(file, "utf8");
@@ -237,6 +282,8 @@ function writeRuntimePatch(patch) {
 function computeDesktopSetupState() {
   const prefs = loadPrefs();
   const rt = readRuntimeJson();
+  const profile = loadProductProfile();
+  const deployRole = resolveDeployRole();
   const portable = currentPortableRoot();
   const portableOk = isPortableOk(portable);
   const ragFromEnv = String(process.env.RAG_BASE_URL || "").trim();
@@ -246,37 +293,52 @@ function computeDesktopSetupState() {
   const wizardCompleted =
     prefs.setupCompleted === true || rt?.setup?.wizardCompleted === true;
   const reasons = [];
-  if (!portableOk) reasons.push("缺少有效的 OpenClaw 便携包路径");
-  if (!ragOk) reasons.push("缺少中台地址 RAG_BASE_URL");
-  // 缺便携包或中台地址 → 一体端强制全屏引导，并禁止「启动全部」
+  if (!portableOk) reasons.push("缺少有效的工作台路径");
+  if (!ragOk) {
+    reasons.push(
+      deployRole === "edge" ? "缺少公司话术服务地址" : "缺少话术服务地址 RAG_BASE_URL"
+    );
+  }
   const needsSetup = !portableOk || !ragOk;
   return {
     needsSetup,
     wizardCompleted,
     reasons,
-    deployRole: String(process.env.DEPLOY_ROLE || "all").trim() || "all",
+    deployRole,
+    packageKind: profile.packageKind,
+    editionLabel: profile.editionLabel,
+    displayName: profile.displayName,
+    roleLocked: profile.roleLocked || app.isPackaged,
     portableRoot: portable,
     portableOk,
-    ragBaseUrl: ragUrl || "http://127.0.0.1:8787",
+    ragBaseUrl: ragUrl || (deployRole === "edge" ? "" : "http://127.0.0.1:8787"),
     ragKeySet: !!String(process.env.RAG_API_KEY || rt?.knowledge?.rag?.apiKey || "").trim(),
     packaged: app.isPackaged,
   };
 }
 
 function applySetupConfig(body) {
-  const deployRole = String(body?.deployRole || "all").trim() || "all";
+  // 角色由安装包固化，引导/配置页不可改
+  const deployRole = resolveDeployRole();
   const portable = String(body?.portableRoot || "").trim();
   const ragUrl = String(body?.ragBaseUrl || "").trim().replace(/\/$/, "");
   const ragKey = body?.ragApiKey != null ? String(body.ragApiKey) : "";
-  if (!ragUrl) throw new Error("请填写中台地址 RAG_BASE_URL");
+  if (!ragUrl) {
+    throw new Error(
+      deployRole === "edge" ? "请填写公司话术服务地址" : "请填写话术服务地址"
+    );
+  }
+  if (deployRole === "edge" && /127\.0\.0\.1|localhost/i.test(ragUrl)) {
+    throw new Error("边端版请填写公司服务器地址，不要使用本机 127.0.0.1");
+  }
   if (portable) {
     if (!isPortableOk(portable) && !app.isPackaged) {
-      throw new Error(`便携包无效，缺少：${portableNodePath(portable)}`);
+      throw new Error(`工作台无效，缺少：${portableNodePath(portable)}`);
     }
     upsertEnvVar("OPENCLAW_PORTABLE_ROOT", portable);
     PORTABLE_ROOT = portable;
   } else if (!isPortableOk(currentPortableRoot())) {
-    throw new Error("请选择有效的 OpenClaw 便携包目录");
+    throw new Error("请选择有效的工作台目录");
   }
   upsertEnvVar("DEPLOY_ROLE", deployRole);
   upsertEnvVar("RAG_BASE_URL", ragUrl);
@@ -293,6 +355,8 @@ function applySetupConfig(body) {
       wizardCompleted: true,
       completedAt: new Date().toISOString(),
       via: "desktop-onboarding",
+      packageKind: loadProductProfile().packageKind,
+      deployRole,
     },
   });
   savePrefs({ ...loadPrefs(), setupCompleted: true, firstRunDone: true, loginHintShown: true });
@@ -386,14 +450,20 @@ async function collectStatus() {
     readyCount,
     totalCount: 6,
     needsSetup: setup.needsSetup,
+    deployRole: setup.deployRole,
+    packageKind: setup.packageKind,
+    editionLabel: setup.editionLabel,
+    roleLocked: setup.roleLocked,
     setup,
   };
   if (tray && !tray.isDestroyed()) {
     const tip = starting
-      ? "正在启动全部服务…"
+      ? `${productTitle()} · 正在开始接待…`
       : stopping
-        ? "正在停止…"
-        : `OpenClaw 客服 · ${readyCount}/6 在线`;
+        ? `${productTitle()} · 正在停止…`
+        : statusCache.watch
+          ? `${productTitle()} · 自动回复中`
+          : `${productTitle()} · 已就绪 ${readyCount}/6`;
     tray.setToolTip(tip);
   }
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -666,14 +736,26 @@ async function ensurePortableConfigured() {
   return true;
 }
 
+function appIconPath() {
+  const ico = path.join(__dirname, "build", "icon.ico");
+  const png = path.join(__dirname, "build", "icon.png");
+  const uiPng = path.join(__dirname, "ui", "icon.png");
+  if (fs.existsSync(ico)) return ico;
+  if (fs.existsSync(png)) return png;
+  if (fs.existsSync(uiPng)) return uiPng;
+  return null;
+}
+
 function createWindow() {
+  const iconPath = appIconPath();
   mainWindow = new BrowserWindow({
     width: 1320,
     height: 900,
     minWidth: 1000,
     minHeight: 680,
-    title: "OpenClaw 客服一体端",
+    title: productTitle(),
     backgroundColor: "#f3f4f6",
+    ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -702,6 +784,15 @@ async function quitAndStopAll() {
 }
 
 function trayIcon() {
+  const iconPath = appIconPath();
+  if (iconPath) {
+    let img = nativeImage.createFromPath(iconPath);
+    if (!img.isEmpty()) {
+      const size = process.platform === "win32" ? 16 : 22;
+      img = img.resize({ width: size, height: size });
+      return img;
+    }
+  }
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAPElEQVQ4T2NkYGD4z0ABYBzVMKoBBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGqG4AAN0aBf0mYbYAAAAASUVORK5CYII=",
     "base64"
@@ -721,11 +812,11 @@ function buildTrayMenu() {
       },
     },
     { type: "separator" },
-    { label: "启动全部服务", click: () => ipcStartAll() },
-    { label: "停止全部服务", click: () => ipcStopAll() },
-    { label: "重新选择 OpenClaw 目录", click: () => ensurePortableConfigured() },
+    { label: "开始接待", click: () => ipcStartAll() },
+    { label: "停止接待", click: () => ipcStopAll() },
+    { label: "重新选择工作台目录", click: () => ensurePortableConfigured() },
     { type: "separator" },
-    { label: "显示配置页", click: () => {
+    { label: "显示店铺设置", click: () => {
       if (mainWindow) {
         mainWindow.show();
         mainWindow.focus();
@@ -735,7 +826,7 @@ function buildTrayMenu() {
     { label: "打开日志目录", click: () => shell.openPath(MEMORY_DIR) },
     { type: "separator" },
     {
-      label: "退出（并停止服务）",
+      label: "退出（并停止接待）",
       click: () => {
         quitAndStopAll().catch(() => app.quit());
       },
@@ -745,7 +836,7 @@ function buildTrayMenu() {
 
 function createTray() {
   tray = new Tray(trayIcon());
-  tray.setToolTip("OpenClaw 客服一体端");
+  tray.setToolTip(productTitle());
   tray.setContextMenu(buildTrayMenu());
   tray.on("double-click", () => {
     if (mainWindow) {

@@ -11,6 +11,81 @@ function Field({ label, children }) {
   );
 }
 
+const CHAT_PATH_LABEL = {
+  kb: "知识库",
+  order: "查单",
+  llm: "OpenClaw",
+  escalate: "升级",
+  fallback: "兜底",
+  clarify: "澄清",
+  scenario: "场景",
+  error: "出错",
+};
+const CHAT_PLAT_LABEL = { meituan: "美团", douyin: "抖音", wecom: "企微" };
+
+function ChatLogsPanel() {
+  const [items, setItems] = useState([]);
+  const [plat, setPlat] = useState("");
+  const [q, setQ] = useState("");
+  const [msg, setMsg] = useState("接待后会出现记录。");
+
+  const loadLogs = useCallback(async () => {
+    const res = await fetch(`/api/chat-logs?limit=80&platform=${encodeURIComponent(plat)}&q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "加载失败");
+    setItems(data.items || []);
+    setMsg((data.items || []).length ? "" : "暂无记录。接待顾客后会出现。");
+  }, [plat, q]);
+
+  useEffect(() => {
+    loadLogs().catch((e) => setMsg(e.message));
+  }, [loadLogs]);
+
+  return (
+    <section>
+      <h2>聊天日志</h2>
+      <p className="hint">顾客来信 → 查单 / 知识库 / OpenClaw → 是否发出。文件 memory/chat-trace.jsonl</p>
+      <div className="row">
+        <Field label="平台">
+          <select value={plat} onChange={(e) => setPlat(e.target.value)}>
+            <option value="">全部</option>
+            <option value="meituan">美团</option>
+            <option value="douyin">抖音</option>
+            <option value="wecom">企微</option>
+          </select>
+        </Field>
+        <Field label="搜索">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="昵称 / 问句 / 回复" onKeyDown={(e) => e.key === "Enter" && loadLogs().catch((err) => setMsg(err.message))} />
+        </Field>
+      </div>
+      <div className="actions">
+        <button type="button" onClick={() => loadLogs().catch((e) => setMsg(e.message))}>刷新日志</button>
+      </div>
+      {msg ? <p className="hint">{msg}</p> : null}
+      <div className="chat-log-list">
+        {items.map((row) => {
+          const sent = row.sent === true ? "已发出" : row.sent === false ? "未发出" : "未确认";
+          const kb = row.kb
+            ? (row.kb.hit ? `知识库命中 via=${row.kb.via || ""} score=${Number(row.kb.score || 0).toFixed(3)}` : "知识库未命中")
+            : "";
+          const order = row.order ? `查单 ${row.order.reason || row.order.error || ""}` : "";
+          const llm = row.llm ? `OpenClaw ${row.llm.used ? (row.llm.blocked ? "拦截编造" : "已调用") : "未用"}` : "";
+          return (
+            <article key={row.id || row.at} className="chat-log-item">
+              <div className="chat-log-meta">
+                {row.at ? new Date(row.at).toLocaleString() : ""} · {CHAT_PLAT_LABEL[row.platform] || row.platform} · {row.customer} · {CHAT_PATH_LABEL[row.path] || row.path || "—"} · {sent}{row.holdReason ? ` · ${row.holdReason}` : ""}
+              </div>
+              <div>顾客：{row.inbound}</div>
+              <div>回复：{row.reply}</div>
+              {(kb || order || llm) ? <div className="chat-log-extra">{[kb, order, llm].filter(Boolean).join(" · ")}</div> : null}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const [status, setStatus] = useState(null);
   const [log, setLog] = useState("就绪。");
@@ -298,6 +373,8 @@ export default function HomePage() {
             <button type="button" onClick={save}>保存配置</button>
           </div>
         </section>
+
+        <ChatLogsPanel />
       </main>
     </>
   );

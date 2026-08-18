@@ -28,7 +28,7 @@
  *     6. listUnreplied*             看「最后一条客服之后」还有哪些顾客话没回
  *     7. 对每条未回话：
  *          claimMessage             抢占（防双发）→ 写入 state
- *          generateReply            想回复（查单/知识库/LLM）
+ *          generateReply            想回复（查单/知识库/LLM）→ 写 memory/chat-trace.jsonl
  *          meituanSend / douyinSend 填输入框并点发送
  *          settleAfterSend          等到气泡出现再离开
  *          finalizeClaim            标记这条已处理完
@@ -92,6 +92,8 @@ try {
 } catch (e) {
   escalateNotify = null;
 }
+
+const chatTraceLib = require("./chat-trace");
 
 /** 升级推企微群：失败不影响主链路 */
 function fireEscalateNotify(cfg, info) {
@@ -227,6 +229,7 @@ function normalizeRuntimeConfig(raw, root) {
   // 默认落盘位置（边端小账本，不是业务数据库）
   if (!cfg.stateFile) cfg.stateFile = path.join(base, "memory", "cs-watch-state.json");
   if (!cfg.logFile) cfg.logFile = path.join(base, "memory", "cs-watch.log");
+  if (!cfg.chatTraceFile) cfg.chatTraceFile = path.join(base, "memory", "chat-trace.jsonl");
   return cfg;
 }
 
@@ -881,7 +884,7 @@ function whitelistHit(list, haystack) {
  *   5) 闲聊可走 LLM；事实题没库 → 澄清，不编造
  * 返回：字符串，或 { escalate:true, reply } 表示别自动发、留给人工。
  */
-async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent }) {
+async function generateReplyCore(cfg, { platform, customer, lastCustomerMsg, recent, _chatTrace: chatTrace }) {
   const msg = String(lastCustomerMsg || "");
   const kbCfg = cfg.knowledge || {};
   const onMiss = String(kbCfg.onMiss || "chat").toLowerCase();
@@ -914,12 +917,19 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
       });
       if (result.meta?.remoteError) {
         log(cfg, "KB_REMOTE_FAIL", result.meta.remoteError.slice(0, 120), "-> local fallback");
+        if (chatTrace) {
+          chatTrace.kb = {
+            ...(chatTrace.kb || {}),
+            remoteError: String(result.meta.remoteError).slice(0, 160),
+          };
+        }
       }
       const minScore = kbCfg.minScore || 0.25;
       const hits = (result.hits || []).filter((h) => h.score >= minScore);
       return { hits, meta: result.meta || {} };
     } catch (e) {
       log(cfg, "KB_ERR", e.message || String(e));
+      if (chatTrace) chatTrace.kb = { hit: false, error: String(e.message || e).slice(0, 160) };
       return { hits: [], meta: { error: String(e.message || e) } };
     }
   };
@@ -938,6 +948,17 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
       `source=${hit.source}`,
       String(q).slice(0, 40)
     );
+    if (chatTrace) {
+      chatTrace.path = "kb";
+      chatTrace.kb = {
+        hit: true,
+        via: origin,
+        score: Number(hit.score) || 0,
+        source: String(hit.source || "").slice(0, 120),
+        query: String(q || "").slice(0, 120),
+        answerPreview: String(hit.answer || "").slice(0, 200),
+      };
+    }
   };
 
   /** LLM 写出知识库/配置里没有的事实 → 视为编造（闲聊语气可以，事实不行） */
@@ -969,6 +990,7 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
     (/退款/.test(msg) && !/退款成功/.test(msg) && !/订单编号/.test(msg))
   ) {
     log(cfg, "KB_ESCALATE", "high-risk", msg.slice(0, 40));
+    if (chatTrace) chatTrace.path = "escalate";
     return escalateReply;
   }
 
@@ -987,6 +1009,15 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
           meta.keyword ? `kw=${String(meta.keyword).slice(0, 24)}` : "",
           msg.slice(0, 40)
         );
+        if (chatTrace) {
+          chatTrace.path = "order";
+          chatTrace.order = {
+            reason: String(meta.reason || "ok").slice(0, 80),
+            via: String(meta.via || "").slice(0, 40),
+            orders: (meta.orders || []).length,
+            keyword: meta.keyword ? String(meta.keyword).slice(0, 40) : "",
+          };
+        }
         if (handled.escalate) {
           return { escalate: true, reply: handled.reply };
         }
@@ -995,6 +1026,10 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
     } catch (e) {
       const err = String(e.message || e);
       log(cfg, "ORDER_LOOKUP_FAIL", err.slice(0, 120));
+      if (chatTrace) {
+        chatTrace.path = "order";
+        chatTrace.order = { error: err.slice(0, 160) };
+      }
       // 已有单号/手机时勿再让 LLM 追问手机号；提示通道未就绪
       if (
         /yl_[a-zA-Z0-9]{4,}/i.test(msg) ||
@@ -1028,11 +1063,23 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
           meta.how || "",
           msg.slice(0, 40)
         );
+        if (chatTrace) {
+          chatTrace.path = "scenario";
+          chatTrace.scenario = {
+            id: String(meta.scenarioId || "").slice(0, 60),
+            reason: String(meta.reason || "").slice(0, 80),
+            how: String(meta.how || "").slice(0, 40),
+          };
+        }
         return handled.reply;
       }
     } catch (e) {
       const err = String(e.message || e);
       log(cfg, "SCENARIO_FAIL", err.slice(0, 160));
+      if (chatTrace) {
+        chatTrace.path = "scenario";
+        chatTrace.scenario = { error: err.slice(0, 160) };
+      }
       if (
         /(打开|扫描|浏览|进入).{0,12}(网站|网页|后台|经营宝|来客|订单)/.test(msg) ||
         /https?:\/\/\S+/i.test(msg)
@@ -1081,6 +1128,7 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
     }
     if (askingAddress) {
       log(cfg, "KB_MISS", "address", msg.slice(0, 40));
+      if (chatTrace) chatTrace.kb = { hit: false, query: q, note: "address" };
       return "亲，门店地址我这边要以资料为准，稍等帮您核对；也可先看团购/订单页的门店导航。";
     }
     return "亲，可以自行到店送洗/核销。需要地址的话直接问「门店在哪」，我按资料回复。";
@@ -1141,15 +1189,25 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
       recent = [...kbHits.map((h) => `[知识库:${h.source}] ${h.answer}`), ...(recent || [])];
     } else {
       log(cfg, "KB_MISS", String(lastCustomerMsg).slice(0, 60));
+      if (chatTrace) {
+        chatTrace.kb = {
+          ...(chatTrace.kb || {}),
+          hit: false,
+          query: String(lastCustomerMsg || "").slice(0, 120),
+          via: String(meta?.mode || "").slice(0, 40),
+        };
+      }
     }
   }
 
   // 原则：闲聊可 LLM；事实题知识库未命中 → 禁止 LLM 自由发挥（防乱编）
   if (!kbHits.length && isPolicyFactQuestion(msg)) {
     log(cfg, "KB_MISS_NO_FABRICATE", "policy-fact", msg.slice(0, 40));
+    if (chatTrace) chatTrace.path = chatTrace.path || "clarify";
     const miss = missReply();
     if (miss && typeof miss === "object" && miss.escalate) {
       log(cfg, "KB_ESCALATE", "onMiss", msg.slice(0, 40));
+      if (chatTrace) chatTrace.path = "escalate";
       return miss;
     }
     // 事实题未命中：用澄清，不用闲聊兜底里可能带的模糊承诺
@@ -1163,13 +1221,16 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
     const miss = missReply();
     if (miss && typeof miss === "object" && miss.escalate) {
       log(cfg, "KB_ESCALATE", "onMiss", msg.slice(0, 40));
+      if (chatTrace) chatTrace.path = "escalate";
       return miss;
     }
+    if (chatTrace) chatTrace.path = chatTrace.path || "fallback";
     return miss;
   }
 
   if (!wantLlm) {
     if (kbHits.length) return kbHits[0].answer;
+    if (chatTrace) chatTrace.path = chatTrace.path || "fallback";
     return missReply();
   }
 
@@ -1179,6 +1240,7 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
     token = fs.readFileSync(cfg.gateway.tokenFile, "utf8").trim();
   } catch {
     log(cfg, "LLM_SKIP", "no gateway token → missReply");
+    if (chatTrace) chatTrace.llm = { used: false, skip: "no-token" };
     return kbHits[0]?.answer || missReply();
   }
 
@@ -1233,18 +1295,58 @@ async function generateReply(cfg, { platform, customer, lastCustomerMsg, recent 
       const text = sanitizeCustomerFacingReply(content);
       if (text && looksHallucinated(text, allowedBlob)) {
         log(cfg, "LLM_BLOCK_HALLUCINATION", msg.slice(0, 40), text.slice(0, 60));
+        if (chatTrace) {
+          chatTrace.path = "llm";
+          chatTrace.llm = {
+            used: true,
+            blocked: "hallucination",
+            withKb: kbHits.length > 0,
+            preview: text.slice(0, 120),
+          };
+        }
         return kbHits[0]?.answer || (isCasualChat(msg) ? fallback() : clarifyReply);
       }
       if (text) {
         log(cfg, "LLM_CHAT", kbHits.length ? "with-kb" : "chat-only", msg.slice(0, 40));
+        if (chatTrace) {
+          chatTrace.path = "llm";
+          chatTrace.llm = {
+            used: true,
+            withKb: kbHits.length > 0,
+            preview: text.slice(0, 120),
+          };
+        }
         return text;
       }
     }
     log(cfg, "LLM_FALLBACK", res.status, (res.raw || "").slice(0, 120));
+    if (chatTrace) chatTrace.llm = { used: true, fallback: true, status: res.status };
   } catch (e) {
     log(cfg, "LLM_ERR", e.message || String(e));
+    if (chatTrace) chatTrace.llm = { used: true, error: String(e.message || e).slice(0, 160) };
   }
   return kbHits[0]?.answer || (isCasualChat(msg) ? fallback() : clarifyReply);
+}
+
+/**
+ * 对外入口：生成回复并附带 _chatTrace（供落盘排查）。
+ */
+async function generateReply(cfg, opts = {}) {
+  const chatTrace = chatTraceLib.beginTrace({
+    platform: opts.platform,
+    customer: opts.customer,
+    inbound: opts.lastCustomerMsg,
+    sessionKey: opts.sessionKey || "",
+  });
+  try {
+    const result = await generateReplyCore(cfg, { ...opts, _chatTrace: chatTrace });
+    return chatTraceLib.seal(chatTrace, result);
+  } catch (e) {
+    chatTrace.error = String(e.message || e).slice(0, 200);
+    chatTrace.path = "error";
+    chatTraceLib.appendChatTrace(cfg, chatTrace);
+    throw e;
+  }
 }
 
 /**
@@ -1278,9 +1380,14 @@ function normalizeReplyResult(replyOrObj) {
     return {
       escalate: !!replyOrObj.escalate,
       reply: sanitizeCustomerFacingReply(replyOrObj.reply || ""),
+      _chatTrace: replyOrObj._chatTrace || null,
     };
   }
-  return { escalate: false, reply: sanitizeCustomerFacingReply(replyOrObj || "") };
+  return {
+    escalate: false,
+    reply: sanitizeCustomerFacingReply(replyOrObj || ""),
+    _chatTrace: null,
+  };
 }
 
 /* ========== SECTION D：在网页上动手 —— 扫列表 / 读聊天 / 点发送 ==========
@@ -2501,6 +2608,7 @@ async function processMeituan(cfg, state) {
           replyRaw = await generateReply(cfg, {
             platform: "meituan",
             customer,
+            sessionKey,
             lastCustomerMsg,
             recent: formatRecentContext(contextMsgs.length ? contextMsgs : thread.recent),
           });
@@ -2511,7 +2619,8 @@ async function processMeituan(cfg, state) {
           log(cfg, "MEITUAN generateReply fail", sessionTag, String(e.message || e).slice(0, 80));
           break;
         }
-        const { escalate, reply } = normalizeReplyResult(replyRaw);
+        const norm = normalizeReplyResult(replyRaw);
+        const { escalate, reply } = norm;
         log(
           cfg,
           "MEITUAN detect",
@@ -2557,6 +2666,14 @@ async function processMeituan(cfg, state) {
             pendingOnly: !escalate && !allowSend,
             soft,
           });
+          chatTraceLib.commitChatTrace(cfg, norm, {
+            sent: false,
+            holdReason: escalate ? "escalate" : "autoSend-off",
+            platform: "meituan",
+            customer,
+            sessionKey,
+            inbound: lastCustomerMsg,
+          });
           if (escalate) log(cfg, "MEITUAN escalate hold", sessionTag);
           else if (!allowSend) log(cfg, "MEITUAN autoSend off, pending only", sessionTag);
           result.openWork = true;
@@ -2573,6 +2690,14 @@ async function processMeituan(cfg, state) {
             reply: reply.slice(0, 200),
             sent,
           });
+          chatTraceLib.commitChatTrace(cfg, norm, {
+            sent: false,
+            holdReason: "send-unconfirmed",
+            platform: "meituan",
+            customer,
+            sessionKey,
+            inbound: lastCustomerMsg,
+          });
           result.openWork = true;
           brokeEarly = true;
           log(cfg, "MEITUAN send unconfirmed, claimFailed for retry", sessionTag, reply.slice(0, 40));
@@ -2588,6 +2713,13 @@ async function processMeituan(cfg, state) {
           settled,
           soft,
           softRetried: soft ? !!state.processed[fp]?.softRetried : undefined,
+        });
+        chatTraceLib.commitChatTrace(cfg, norm, {
+          sent: true,
+          platform: "meituan",
+          customer,
+          sessionKey,
+          inbound: lastCustomerMsg,
         });
         state.processed[fingerprint("meituan", sessionKey, reply)] = {
           at: new Date().toISOString(),
@@ -3030,6 +3162,7 @@ async function processDouyin(cfg, state) {
           replyRaw = await generateReply(cfg, {
             platform: "douyin",
             customer,
+            sessionKey: customer,
             lastCustomerMsg,
             recent: formatRecentContext(contextMsgs),
           });
@@ -3039,7 +3172,8 @@ async function processDouyin(cfg, state) {
           log(cfg, "DOUYIN generateReply fail", customer, String(e.message || e).slice(0, 80));
           break;
         }
-        const { escalate, reply } = normalizeReplyResult(replyRaw);
+        const norm = normalizeReplyResult(replyRaw);
+        const { escalate, reply } = norm;
         log(
           cfg,
           "DOUYIN detect",
@@ -3081,6 +3215,14 @@ async function processDouyin(cfg, state) {
             pendingOnly: !escalate && !allowSend,
             soft,
           });
+          chatTraceLib.commitChatTrace(cfg, norm, {
+            sent: false,
+            holdReason: escalate ? "escalate" : "autoSend-off",
+            platform: "douyin",
+            customer,
+            sessionKey: customer,
+            inbound: lastCustomerMsg,
+          });
           if (escalate) log(cfg, "DOUYIN escalate hold", customer);
           else if (!allowSend) log(cfg, "DOUYIN autoSend off, pending only", customer);
           brokeEarly = true;
@@ -3096,6 +3238,14 @@ async function processDouyin(cfg, state) {
             reply: reply.slice(0, 200),
             sent,
           });
+          chatTraceLib.commitChatTrace(cfg, norm, {
+            sent: false,
+            holdReason: "send-unconfirmed",
+            platform: "douyin",
+            customer,
+            sessionKey: customer,
+            inbound: lastCustomerMsg,
+          });
           brokeEarly = true;
           log(cfg, "DOUYIN send unconfirmed, claimFailed for retry", customer, reply.slice(0, 40));
           break;
@@ -3106,6 +3256,13 @@ async function processDouyin(cfg, state) {
           settled,
           soft,
           softRetried: soft ? !!state.processed[fp]?.softRetried : undefined,
+        });
+        chatTraceLib.commitChatTrace(cfg, norm, {
+          sent: true,
+          platform: "douyin",
+          customer,
+          sessionKey: customer,
+          inbound: lastCustomerMsg,
         });
         state.processed[fingerprint("douyin", customer, reply)] = { at: new Date().toISOString(), self: true };
         contextMsgs.push({ self: true, t: reply });

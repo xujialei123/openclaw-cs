@@ -42,7 +42,7 @@ Tick
       → retrieve(shopId, platform, kbIds)  【remote 优先】
       → 命中：对外话术
       → 未命中：onMiss（clarify / escalate / fallback）
- → 写 state（processed / quiet）+ 日志
+ → 写 state（processed / quiet）+ 过程日志 + 聊天日志（chat-trace）
 ```
 
 查单日志关键字：`ORDER_LOOKUP` / `ORDER_LOOKUP_FAIL`。OpenClaw 浏览器需已登录自有后台。
@@ -91,7 +91,7 @@ Tick
 | 使用教程 | `docs/guide.md` |
 | 本流程页 | `docs/dev-flow.md` |
 | 生产交付 | `docs/deploy.md` |
-| 日志 | `memory/cs-watch.log` |
+| 日志 | `memory/cs-watch.log`（过程）+ `memory/chat-trace.jsonl`（顾客↔回复） |
 
 ## 禁止事项
 

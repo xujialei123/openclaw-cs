@@ -26,6 +26,60 @@ header.config-header p {
   line-height: 1.5;
 }
 
+/* 一体端 iframe ?product=1：藏研发入口，客户化文案 */
+html.product-mode .nav-dev {
+  display: none !important;
+}
+html.product-mode .product-hide {
+  display: none !important;
+}
+html.product-mode .product-only {
+  display: block !important;
+}
+html.product-mode span.product-only {
+  display: inline !important;
+}
+html.product-mode h2.product-only,
+html.product-mode h1.product-only {
+  display: block !important;
+  margin: 0 0 12px;
+}
+
+html.product-mode .wiz-role-pick,
+html.product-mode .env-field-DEPLOY_ROLE {
+  display: none !important;
+}
+html.product-mode .wiz-role-locked {
+  display: block !important;
+}
+
+/* 一体端：更像店铺设置，少研发感 */
+html.product-mode header.config-header {
+  padding: 14px 20px 12px;
+}
+html.product-mode header.config-header .brand {
+  font-size: 1.15rem;
+}
+html.product-mode main.config-main {
+  padding: 16px 20px 28px;
+  gap: 14px;
+}
+html.product-mode .col-tech {
+  display: none !important;
+}
+html.product-mode .log {
+  max-height: 88px;
+  font-size: 12px;
+}
+html.product-mode section.card h2 {
+  font-size: 14px;
+}
+html.product-mode .drop {
+  min-height: 72px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 main.config-main {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
@@ -203,6 +257,47 @@ th { color: var(--muted); font-weight: 500; }
   border-color: #fecaca;
   color: #991b1b;
   background: #fef2f2;
+}
+.chip.ok {
+  border-color: #a7f3d0;
+  color: #065f46;
+  background: #ecfdf5;
+}
+.chip.hold {
+  border-color: #fde68a;
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.chat-log-list {
+  margin-top: 12px;
+  max-height: 420px;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  font-size: 13px;
+}
+.chat-log-item {
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  background: var(--bg2, #f9fafb);
+}
+.chat-log-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.chat-log-in,
+.chat-log-out {
+  margin: 4px 0;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.chat-log-extra {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .hint {

@@ -51,7 +51,15 @@
 | TP.9 | `[x]` | 启动带使用教程 + 研发流程页 | `/guide` `/dev-flow`；新功能必须同步文档（AGENTS） |
 | TP.10 | `[~]` | **形态自检**：边端可只连远程中台（本机可不跑库） | `DEPLOY_ROLE=edge` + `RAG_BASE_URL`；`-SkipDocker` |
 | TP.11 | `[x]` | 配置样例拆分：`cs-runtime.json`（联调）/ `cs-runtime.prod.example.json` | prod：`fallbackLocal=false`、远程 baseUrl |
+| TP.12 | `[x]` | 转人工推企微内部群 Webhook | `notify.escalate`；日志 `ESCALATE_NOTIFY ok` |
 | TP.13 | `[x]` | 一体端未配置时强制启动引导（产品级 UI） | 缺便携包/`RAG_BASE_URL` 全屏引导；保存写 `.env`；拦启动/自动启动 |
+| TP.14 | `[x]` | 本机中台一键启动（供边端局域网连接） | `npm run start:mid` / `Stop-Mid`；打印局域网 IP 与防火墙提示 |
+| TP.15 | `[x]` | 一体端产品化文案 + 应用图标 | 对外名「智能客服」；`build/icon.ico`；托盘/快捷方式；iframe `?product=1` 藏研发导航 |
+| TP.16 | `[x]` | 桌面安装包双模式（边端 / 全栈） | `desktop:dist:edge` / `:full` / `:dist`=both；`product-profile` 固化角色；引导不再选 DEPLOY_ROLE |
+| TP.17 | `[x]` | 配置台 OpenClaw LLM + 扩展 env | `/api/openclaw-llm` 写便携包 openclaw.json/.env；边端/中台 env 白名单扩全 |
+| TP.18 | `[x]` | LLM 服务商官方预设 | DeepSeek/通义国内国际/Kimi国内国际/OpenAI/Agnes；模型 ID datalist 提示 |
+| TP.19 | `[x]` | 一体端产品观感收紧 | 运行记录默认收起；配置页藏骨架/端口文案；状态条弱化为指示灯 |
+| TP.20 | `[x]` | 聊天排查日志（顾客↔知识库/OpenClaw） | 配置台「聊天日志」；`memory/chat-trace.jsonl`；含查单命中、KB via、是否发出 |
 
 ---
 

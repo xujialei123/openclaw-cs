@@ -22,6 +22,7 @@ const {
   normalizeReplyResult,
   fireEscalateNotify,
 } = require("../edge-worker/cs-watch.js");
+const chatTraceLib = require("../edge-worker/chat-trace");
 const escalateNotify = (() => {
   try {
     return require("../edge-worker/escalate-notify");
@@ -157,6 +158,7 @@ async function handleTextFrame(wsClient, cfg, frame) {
   }
 
   let reply = "在的，稍等我帮您看一下。";
+  let norm = null;
   try {
     const raw = await Promise.race([
       generateReply(cfg, {
@@ -164,10 +166,11 @@ async function handleTextFrame(wsClient, cfg, frame) {
         customer: meta.userid || chatKey,
         lastCustomerMsg: text,
         recent,
+        sessionKey: chatKey,
       }),
       new Promise((_, rej) => setTimeout(() => rej(new Error("reply-timeout")), wcfg.replyTimeoutMs)),
     ]);
-    const norm = normalizeReplyResult(raw);
+    norm = normalizeReplyResult(raw);
     reply = norm.reply || reply;
     if (norm.escalate) {
       reply = reply || "这个问题我先帮您转人工核实，请稍等。";
@@ -187,6 +190,20 @@ async function handleTextFrame(wsClient, cfg, frame) {
   } catch (e) {
     log("generateReply fail", String(e.message || e).slice(0, 120));
     reply = "亲，这边处理超时了，请稍后再试，或把订单号发我我帮您查。";
+    if (!norm) {
+      norm = {
+        escalate: false,
+        reply,
+        _chatTrace: chatTraceLib.beginTrace({
+          platform: "wecom",
+          customer: meta.userid || chatKey,
+          inbound: text,
+          sessionKey: chatKey,
+        }),
+      };
+      norm._chatTrace.path = "error";
+      norm._chatTrace.error = String(e.message || e).slice(0, 160);
+    }
   }
 
   // 企微单条流式内容有长度限制，截断保底
@@ -195,8 +212,24 @@ async function handleTextFrame(wsClient, cfg, frame) {
   try {
     await wsClient.replyStream(frame, streamId, reply, true);
     log("sent", reply.slice(0, 80));
+    chatTraceLib.commitChatTrace(cfg, { ...norm, reply }, {
+      sent: true,
+      platform: "wecom",
+      customer: meta.userid || chatKey,
+      sessionKey: chatKey,
+      inbound: text,
+    });
   } catch (e) {
     log("reply fail", String(e.message || e).slice(0, 120));
+    chatTraceLib.commitChatTrace(cfg, { ...norm, reply }, {
+      sent: false,
+      holdReason: "reply-fail",
+      error: String(e.message || e).slice(0, 160),
+      platform: "wecom",
+      customer: meta.userid || chatKey,
+      sessionKey: chatKey,
+      inbound: text,
+    });
   }
 }
 

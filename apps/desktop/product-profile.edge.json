@@ -1,0 +1,8 @@
+{
+  "packageKind": "edge",
+  "deployRole": "edge",
+  "displayName": "智能客服",
+  "editionLabel": "边端版",
+  "shortcutName": "智能客服",
+  "roleLocked": true
+}

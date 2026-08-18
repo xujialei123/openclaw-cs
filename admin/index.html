@@ -3,32 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenClaw 客服 · 配置中心</title>
+  <title>智能客服 · 店铺设置</title>
   <link rel="stylesheet" href="/docs.css" />
   <link rel="stylesheet" href="/config.css" />
+  <script>
+    (function () {
+      try {
+        var q = new URLSearchParams(location.search);
+        if (q.get("product") === "1") {
+          document.documentElement.classList.add("product-mode");
+        }
+        var role = (q.get("role") || "").toLowerCase();
+        if (role === "edge" || role === "all") {
+          document.documentElement.setAttribute("data-deploy-role", role);
+        }
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body>
   <header class="config-header">
     <nav class="topnav">
-      <a class="on" href="/">配置台</a>
+      <a class="on" href="/">店铺设置</a>
       <a href="/guide">使用教程</a>
-      <a href="/dev-flow">研发流程</a>
-      <a href="/project-map">项目全景</a>
-      <a href="/deploy">生产交付</a>
-      <button type="button" class="secondary" id="btnOpenWizard">分步引导配置</button>
+      <a class="nav-dev" href="/dev-flow">研发流程</a>
+      <a class="nav-dev" href="/project-map">项目全景</a>
+      <a class="nav-dev" href="/deploy">生产交付</a>
+      <button type="button" class="secondary" id="btnOpenWizard">分步引导</button>
     </nav>
-    <h1 class="brand">OpenClaw <span>配置中心</span></h1>
-    <p>管理白名单、知识库转发、查单与环境变量。向量库在 <code>rag-service:8787</code>。首次使用请先看 <a href="/guide">使用教程</a>；目录职责看 <a href="/project-map">项目全景</a>；交付看 <a href="/deploy">生产部署</a>。</p>
+    <h1 class="brand product-hide">OpenClaw <span>配置中心</span></h1>
+    <h1 class="brand product-only" hidden>店铺设置</h1>
+    <p class="product-hide">管理白名单、知识库转发、查单与环境变量。向量库在 <code>rag-service:8787</code>。首次使用请先看 <a href="/guide">使用教程</a>；目录职责看 <a href="/project-map">项目全景</a>；交付看 <a href="/deploy">生产部署</a>。</p>
+    <p class="product-only" hidden>设置哪些顾客可自动回复、上传话术、查单与升级通知。不清楚时先看 <a href="/guide">使用教程</a>。</p>
   </header>
   <div class="setup-banner" id="setupBanner">
-    <span>检测到尚未完成基础配置（便携包路径 / 中台地址）。建议先走一遍分步引导。</span>
+    <span class="product-hide">检测到尚未完成基础配置（便携包路径 / 中台地址）。建议先走一遍分步引导。</span>
+    <span class="product-only" hidden>检测到尚未完成基础配置。建议先走一遍分步引导。</span>
     <button type="button" id="btnBannerWizard">开始引导</button>
   </div>
 
   <div class="wiz-backdrop" id="wizBackdrop" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
     <div class="wiz">
       <h2 id="wizTitle">首次配置引导</h2>
-      <p class="sub">按步骤填完即可开始用。随时可点右上角「分步引导配置」重来。</p>
+      <p class="sub">按步骤填完即可开始用。随时可点右上角「分步引导」重来。</p>
       <div class="wiz-steps" id="wizSteps">
         <span data-i="0">1 角色与路径</span>
         <span data-i="1">2 平台</span>
@@ -38,9 +55,12 @@
       </div>
 
       <div class="wiz-pane on" data-step="0">
-        <p class="hint">一体端启动时若未配置会先全屏引导；此处可随时重来。本机全栈 / 仅边端决定是否连远程中台。</p>
-        <label>DEPLOY_ROLE</label>
-        <select id="wizDeployRole">
+        <p class="hint">一体端安装包已固化边端/全栈角色，此处只需确认路径与话术服务地址。浏览器打开配置台时仍可改（开发态）。</p>
+        <div id="wizRoleLocked" class="wiz-role-locked" hidden>
+          <p class="hint"><strong id="wizRoleLabel">安装包角色已锁定</strong> — 不在此切换全栈/边端。</p>
+        </div>
+        <label class="wiz-role-pick">DEPLOY_ROLE</label>
+        <select id="wizDeployRole" class="wiz-role-pick">
           <option value="all">all · 本机全栈</option>
           <option value="edge">edge · 仅边端（连远程中台）</option>
         </select>
@@ -119,12 +139,14 @@
 
   <main class="config-main">
     <section class="card">
-      <h2>中台状态</h2>
+      <h2 class="product-hide">中台状态</h2>
+      <h2 class="product-only" hidden>服务状态</h2>
       <div class="stats" id="stats"></div>
-      <p style="color:var(--muted);font-size:.9rem;margin:0">
+      <p class="product-hide" style="color:var(--muted);font-size:.9rem;margin:0">
         骨架管理页也可直接用：
         <a id="ragAdminLink" href="http://127.0.0.1:8787/kb-admin" target="_blank">8787/kb-admin</a>
       </p>
+      <p class="product-only hint" hidden id="ragHintProduct" style="margin:8px 0 0">话术服务离线时，上传与智能检索暂不可用。</p>
       <div class="actions">
         <button type="button" id="btnRefresh">刷新</button>
         <button type="button" class="secondary" id="btnCreateKb">创建知识库</button>
@@ -133,8 +155,12 @@
     </section>
 
     <section class="card">
-      <h2>上传并编译（转发 8787）</h2>
-      <div class="drop" id="drop">拖拽 .md / .txt，或点击选择（上传后自动 ingest + compile-brain）</div>
+      <h2 class="product-hide">上传并编译（转发 8787）</h2>
+      <h2 class="product-only" hidden>上传话术</h2>
+      <div class="drop" id="drop">
+        <span class="product-hide">拖拽 .md / .txt，或点击选择（上传后自动 ingest + compile-brain）</span>
+        <span class="product-only" hidden>拖入话术文件（.md / .txt），或点击选择</span>
+      </div>
       <input type="file" id="file" accept=".md,.txt,text/markdown,text/plain" multiple hidden />
       <label>或粘贴 Markdown</label>
       <div class="row">
@@ -143,15 +169,19 @@
       </div>
       <textarea id="pasteBody" placeholder="问：……&#10;答：……"></textarea>
       <div class="actions">
-        <button type="button" id="btnUploadPaste">上传到中台</button>
+        <button type="button" id="btnUploadPaste">
+          <span class="product-hide">上传到中台</span>
+          <span class="product-only" hidden>上传话术</span>
+        </button>
       </div>
     </section>
 
     <section class="card full">
-      <h2>中台文件列表</h2>
+      <h2 class="product-hide">中台文件列表</h2>
+      <h2 class="product-only" hidden>已上传话术</h2>
       <div style="overflow:auto;max-height:240px">
         <table>
-          <thead><tr><th>文件</th><th>状态</th><th>chunks</th><th>id</th></tr></thead>
+          <thead><tr><th>文件</th><th>状态</th><th>chunks</th><th class="col-tech">id</th></tr></thead>
           <tbody id="fileRows"></tbody>
         </table>
       </div>
@@ -163,6 +193,30 @@
       <input type="text" id="query" placeholder="这个套餐可以洗哪些东西？" />
       <div class="actions"><button type="button" id="btnSearch">检索</button></div>
       <div class="log" id="searchOut">—</div>
+    </section>
+
+    <section class="card full">
+      <h2>聊天日志</h2>
+      <p class="hint">顾客来信 → 查单 / 知识库 / OpenClaw → 回复是否发出。落盘 <code>memory/chat-trace.jsonl</code>，方便对照「为什么这么回」。</p>
+      <div class="row">
+        <div>
+          <label>平台</label>
+          <select id="chatLogPlat">
+            <option value="">全部</option>
+            <option value="meituan">美团</option>
+            <option value="douyin">抖音</option>
+            <option value="wecom">企微</option>
+          </select>
+        </div>
+        <div>
+          <label>搜索</label>
+          <input type="text" id="chatLogQ" placeholder="昵称 / 问句 / 回复 / 路径" />
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="secondary" id="btnChatLogs">刷新日志</button>
+      </div>
+      <div id="chatLogList" class="chat-log-list">接待后会出现记录。</div>
     </section>
 
     <section class="card">
@@ -346,9 +400,51 @@
       <p class="hint">启用=开 且地址非空才会推送。点上方「保存到 cs-runtime.json」一并保存；巡检热读，下个消息生效。</p>
     </section>
 
+    <section class="card full" id="openclawLlmCard">
+      <h2>OpenClaw LLM（对话模型）</h2>
+      <p class="hint" id="llmNote">配置 Gateway 使用的 API Key、Base URL 与主模型。写入便携包 <code>data\.openclaw\</code>；密钥不回传，留空=不改。</p>
+      <p class="hint" id="llmPaths" style="margin-top:4px"></p>
+      <div class="row">
+        <div>
+          <label>服务商</label>
+          <select id="llmProvider">
+            <option value="deepseek">DeepSeek</option>
+            <option value="dashscope">通义千问 · 国内</option>
+            <option value="dashscope-intl">通义千问 · 国际</option>
+            <option value="moonshot">Kimi · 国内</option>
+            <option value="moonshot-intl">Kimi · 国际</option>
+            <option value="openai">OpenAI</option>
+            <option value="agnes">Agnes</option>
+          </select>
+        </div>
+        <div>
+          <label>主模型 ID</label>
+          <input type="text" id="llmModelId" list="llmModelHints" placeholder="例如 deepseek-v4-flash / qwen-plus" spellcheck="false" />
+          <datalist id="llmModelHints"></datalist>
+        </div>
+      </div>
+      <label>Base URL</label>
+      <input type="text" id="llmBaseUrl" placeholder="https://api.deepseek.com" spellcheck="false" />
+      <div class="row">
+        <div>
+          <label>API Key 环境变量名</label>
+          <input type="text" id="llmEnvVar" placeholder="OPENCLAW_USB_DEEPSEEK_API_KEY" spellcheck="false" />
+        </div>
+        <div>
+          <label>API Key（留空不改）</label>
+          <input type="password" id="llmApiKey" placeholder="已设置则留空" autocomplete="off" />
+        </div>
+      </div>
+      <p class="hint" id="llmPrimaryHint"></p>
+      <div class="actions">
+        <button type="button" id="btnSaveLlm">保存 LLM 配置</button>
+        <button type="button" class="secondary" id="btnReloadLlm">重新加载</button>
+      </div>
+    </section>
+
     <section class="card full">
       <h2>环境变量（.env）</h2>
-      <p class="hint" id="envNote">可在此改边端 / 中台常用变量；密钥字段不回传明文，留空=不修改。保存后需重启 Start-All（及 rag-service）才完全生效。</p>
+      <p class="hint" id="envNote">可在此改边端 / 中台常用变量；密钥字段不回传明文，留空=不修改。保存后需重启 Start-All（及 rag-service）才完全生效。对话模型请用上方「OpenClaw LLM」。</p>
       <div class="row" style="align-items:start">
         <div>
           <h3 style="margin:0 0 8px;font-size:.95rem;color:var(--muted)">边端 · 根目录 .env</h3>
@@ -392,11 +488,14 @@
       { key: "DEPLOY_ROLE", select: ["all", "edge"] },
       { key: "OPENCLAW_PORTABLE_ROOT" },
       { key: "BRAIN_ROOT" },
+      { key: "SKELETON_ROOT" },
       { key: "ADMIN_PORT" },
       { key: "OPENCLAW_GATEWAY_URL" },
       { key: "OPENCLAW_CDP_URL" },
       { key: "RAG_BASE_URL" },
       { key: "RAG_API_KEY", secret: true },
+      { key: "WECOM_AIBOT_ID" },
+      { key: "WECOM_AIBOT_SECRET", secret: true },
     ];
     const BRAIN_ENV_META = [
       { key: "DATABASE_URL", secret: true },
@@ -410,6 +509,19 @@
       { key: "EMBEDDING_API_KEY", secret: true },
       { key: "EMBEDDING_MODEL" },
       { key: "EMBEDDING_DIM" },
+      { key: "LLM_BASE_URL" },
+      { key: "LLM_MODEL" },
+      { key: "LLM_API_KEY", secret: true },
+    ];
+    let llmState = null;
+    const LLM_PRESET_FALLBACK = [
+      { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com", envVar: "OPENCLAW_USB_DEEPSEEK_API_KEY", suggestModel: "deepseek-v4-flash", modelHints: ["deepseek-v4-flash", "deepseek-v4-pro"] },
+      { id: "dashscope", label: "通义千问 · 国内", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1", envVar: "DASHSCOPE_API_KEY", suggestModel: "qwen-plus", modelHints: ["qwen-plus", "qwen-flash", "qwen-max", "qwen3.8-max"] },
+      { id: "dashscope-intl", label: "通义千问 · 国际", baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", envVar: "DASHSCOPE_API_KEY", suggestModel: "qwen-plus", modelHints: ["qwen-plus", "qwen-flash", "qwen-max", "qwen3.8-max"] },
+      { id: "moonshot", label: "Kimi · 国内", baseUrl: "https://api.moonshot.cn/v1", envVar: "MOONSHOT_API_KEY", suggestModel: "kimi-k3", modelHints: ["kimi-k3", "kimi-k2.6"] },
+      { id: "moonshot-intl", label: "Kimi · 国际", baseUrl: "https://api.moonshot.ai/v1", envVar: "MOONSHOT_API_KEY", suggestModel: "kimi-k3", modelHints: ["kimi-k3", "kimi-k2.6"] },
+      { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", envVar: "OPENCLAW_LLM_API_KEY", suggestModel: "gpt-4o-mini", modelHints: ["gpt-4o-mini", "gpt-4o"] },
+      { id: "agnes", label: "Agnes", baseUrl: "https://apihub.agnes-ai.com/v1", envVar: "AGNES_API_KEY", suggestModel: "agnes-2.0-flash", modelHints: ["agnes-2.0-flash"] },
     ];
     function renderEnvFields(containerId, meta, data) {
       const el = $(containerId);
@@ -419,16 +531,33 @@
         const ph = m.secret
           ? (d.set ? "已设置，留空不改" : "未设置")
           : "";
+        const wrapClass = `env-field env-field-${m.key}`;
         if (m.select) {
           const opts = m.select.map((v) =>
             `<option value="${v}"${d.value === v ? " selected" : ""}>${v}</option>`
           ).join("");
-          return `<div class="env-field"><label>${m.key}${setTag}</label><select id="env_${m.key}">${opts}</select></div>`;
+          return `<div class="${wrapClass}"><label>${m.key}${setTag}</label><select id="env_${m.key}">${opts}</select></div>`;
         }
         const type = m.secret ? "password" : "text";
         const val = m.secret ? "" : escapeHtml(d.value || "");
-        return `<div class="env-field"><label>${m.key}${setTag}</label><input type="${type}" id="env_${m.key}" value="${val}" placeholder="${ph}" autocomplete="off" /></div>`;
+        return `<div class="${wrapClass}"><label>${m.key}${setTag}</label><input type="${type}" id="env_${m.key}" value="${val}" placeholder="${ph}" autocomplete="off" /></div>`;
       }).join("");
+    }
+    function lockedDeployRole() {
+      if (!document.documentElement.classList.contains("product-mode")) return "";
+      const r = (document.documentElement.getAttribute("data-deploy-role") || "").toLowerCase();
+      return r === "edge" || r === "all" ? r : "";
+    }
+    function applyLockedRoleUi() {
+      const role = lockedDeployRole();
+      if (!role) return;
+      const label = role === "edge" ? "边端版（连接公司服务器）" : "全栈版（本机独立）";
+      if ($("wizRoleLabel")) $("wizRoleLabel").textContent = `当前安装包：${label}`;
+      if ($("wizRoleLocked")) $("wizRoleLocked").hidden = false;
+      if ($("wizDeployRole")) {
+        $("wizDeployRole").value = role;
+        $("wizDeployRole").disabled = true;
+      }
     }
     function collectEnvPatch(meta) {
       const out = {};
@@ -446,6 +575,98 @@
       $("brainEnvPath").textContent = e.brainPath || "";
       renderEnvFields("edgeEnvFields", EDGE_ENV_META, e.edge);
       renderEnvFields("brainEnvFields", BRAIN_ENV_META, e.brain);
+      applyLockedRoleUi();
+      const locked = lockedDeployRole();
+      if (locked && $("env_DEPLOY_ROLE")) $("env_DEPLOY_ROLE").value = locked;
+    }
+    function fillLlmForm(s) {
+      const data = s && typeof s === "object" ? s : {};
+      const presets = (Array.isArray(data.presets) && data.presets.length)
+        ? data.presets
+        : LLM_PRESET_FALLBACK;
+      llmState = { ...data, presets };
+      if ($("llmNote") && data.note) $("llmNote").textContent = data.note;
+      if ($("llmPaths")) {
+        $("llmPaths").textContent = data.configPath
+          ? `配置：${data.configPath}  · 密钥：${data.envPath || "（尚未创建 .env）"}`
+          : "";
+      }
+      const sel = $("llmProvider");
+      if (!sel) return;
+      const known = new Set(presets.map((p) => p.id));
+      const extra = (data.providers || []).filter((p) => p && p.id && !known.has(p.id));
+      sel.innerHTML =
+        presets.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.label || p.id)}</option>`).join("") +
+        extra.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.id)}（已有）</option>`).join("");
+      const pid = data.providerId || "deepseek";
+      if (![...sel.options].some((o) => o.value === pid)) {
+        const opt = document.createElement("option");
+        opt.value = pid;
+        opt.textContent = pid;
+        sel.appendChild(opt);
+      }
+      sel.value = pid;
+      if ($("llmModelId")) $("llmModelId").value = data.modelId || "";
+      if ($("llmBaseUrl")) $("llmBaseUrl").value = data.baseUrl || "";
+      if ($("llmEnvVar")) $("llmEnvVar").value = data.apiKeyEnvVar || "";
+      if ($("llmApiKey")) {
+        $("llmApiKey").value = "";
+        $("llmApiKey").placeholder = data.apiKeySet ? "已设置，留空不改" : "未设置，请填写";
+      }
+      const preset0 = presets.find((p) => p.id === pid);
+      const existing0 = (data.providers || []).find((p) => p.id === pid);
+      fillModelHints(preset0, existing0);
+      if ($("llmPrimaryHint")) {
+        const primary = data.primaryModel || `${pid}/${data.modelId || ""}`;
+        $("llmPrimaryHint").textContent =
+          `当前主模型：${primary || "—"}` + (data.apiKeySet ? " · API Key 已配置" : " · API Key 未配置");
+      }
+    }
+    function fillModelHints(preset, existing) {
+      const dl = $("llmModelHints");
+      if (!dl) return;
+      const hints = [];
+      if (preset && Array.isArray(preset.modelHints)) hints.push(...preset.modelHints);
+      if (existing && Array.isArray(existing.modelIds)) {
+        for (const id of existing.modelIds) if (id && !hints.includes(id)) hints.push(id);
+      }
+      dl.innerHTML = hints.map((id) => `<option value="${escapeHtml(id)}"></option>`).join("");
+    }
+    function applyLlmPreset(providerId) {
+      if (!llmState) llmState = { presets: LLM_PRESET_FALLBACK };
+      const preset = (llmState.presets || LLM_PRESET_FALLBACK).find((p) => p.id === providerId);
+      const existing = (llmState.providers || []).find((p) => p.id === providerId);
+      fillModelHints(preset, existing);
+      if (existing) {
+        $("llmBaseUrl").value = existing.baseUrl || (preset && preset.baseUrl) || "";
+        $("llmEnvVar").value = existing.apiKeyEnvVar || (preset && preset.envVar) || "";
+        if (existing.modelIds && existing.modelIds[0]) $("llmModelId").value = existing.modelIds[0];
+        else if (preset) $("llmModelId").value = preset.suggestModel || $("llmModelId").value;
+        $("llmApiKey").placeholder = existing.apiKeySet ? "已设置，留空不改" : "未设置，请填写";
+      } else if (preset) {
+        $("llmBaseUrl").value = preset.baseUrl || "";
+        $("llmEnvVar").value = preset.envVar || "";
+        $("llmModelId").value = preset.suggestModel || "";
+        $("llmApiKey").placeholder = "未设置，请填写";
+      }
+      if ($("llmPrimaryHint")) {
+        $("llmPrimaryHint").textContent =
+          `将保存为主模型：${providerId}/${$("llmModelId").value || "…"}` +
+          (preset && preset.modelHints ? ` · 可选：${preset.modelHints.join(" / ")}` : "");
+      }
+    }
+    async function loadLlm() {
+      try {
+        const s = await api("/api/openclaw-llm");
+        fillLlmForm(s);
+      } catch (e) {
+        fillLlmForm({ presets: LLM_PRESET_FALLBACK, providerId: "deepseek" });
+        applyLlmPreset("deepseek");
+        throw e;
+      }
+    }
+    function isProductMode() {
+      return document.documentElement.classList.contains("product-mode");
     }
     async function refresh() {
       const s = await api("/api/status");
@@ -455,19 +676,40 @@
       const dyL = p.douyin?.enabled !== false;
       const mtS = p.meituan?.autoSend !== false;
       const dyS = p.douyin?.autoSend !== false;
-      $("stats").innerHTML = [
-        ["中台", online ? "在线" : "离线"],
-        ["mode", s.mode],
-        ["美团", `${mtL ? "监听" : "停听"}/${mtS ? "发送" : "不发"}`],
-        ["抖音", `${dyL ? "监听" : "停听"}/${dyS ? "发送" : "不发"}`],
-        ["知识库数", (s.knowledgeBases || []).length],
-        ["默认 kb", (s.config?.knowledge?.rag?.kbIds || [])[0] || "—"],
-      ].map(([k, v]) => `<div class="stat"><b>${escapeHtml(String(v))}</b><small>${k}</small></div>`).join("");
-      if (s.ragBaseUrl) {
+      const product = isProductMode();
+      const kbId = (s.config?.knowledge?.rag?.kbIds || [])[0] || "—";
+      const rows = product
+        ? [
+            ["话术服务", online ? "在线" : "离线"],
+            ["美团", `${mtL ? "监听" : "停听"}/${mtS ? "发送" : "不发"}`],
+            ["抖音", `${dyL ? "监听" : "停听"}/${dyS ? "发送" : "不发"}`],
+            ["知识库", (s.knowledgeBases || []).length],
+          ]
+        : [
+            ["中台", online ? "在线" : "离线"],
+            ["mode", s.mode],
+            ["美团", `${mtL ? "监听" : "停听"}/${mtS ? "发送" : "不发"}`],
+            ["抖音", `${dyL ? "监听" : "停听"}/${dyS ? "发送" : "不发"}`],
+            ["知识库数", (s.knowledgeBases || []).length],
+            ["默认 kb", kbId],
+          ];
+      $("stats").innerHTML = rows
+        .map(([k, v]) => `<div class="stat"><b>${escapeHtml(String(v))}</b><small>${k}</small></div>`)
+        .join("");
+      if ($("ragAdminLink") && s.ragBaseUrl) {
         $("ragAdminLink").href = s.ragBaseUrl.replace(/\/$/, "") + "/kb-admin";
       }
-      if (!online) log("8787 未就绪：企业上传/向量检索不可用，可开 fallbackLocal 或先启动骨架 rag-service", "err");
-      else if (s.ragError) log(s.ragError, "err");
+      if ($("ragHintProduct")) {
+        $("ragHintProduct").hidden = !product || online;
+      }
+      if (!online) {
+        log(
+          product
+            ? "话术服务未就绪：上传与智能检索暂时不可用，请确认公司服务器或本机服务已启动"
+            : "8787 未就绪：企业上传/向量检索不可用，可开 fallbackLocal 或先启动骨架 rag-service",
+          "err"
+        );
+      } else if (s.ragError) log(s.ragError, "err");
 
       const files = await api("/api/files").catch(() => ({ files: [] }));
       $("fileRows").innerHTML = (files.files || []).map((f) => `
@@ -475,8 +717,8 @@
           <td>${escapeHtml(f.fileName)}</td>
           <td><span class="chip">${escapeHtml(f.parseStatus || "")}</span></td>
           <td>${f.chunkCount ?? "—"}</td>
-          <td style="font-size:.75rem;color:var(--muted)">${escapeHtml(f.id || "")}</td>
-        </tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">暂无文件（先上传或创建知识库）</td></tr>`;
+          <td class="col-tech" style="font-size:.75rem;color:var(--muted)">${escapeHtml(f.id || "")}</td>
+        </tr>`).join("") || `<tr><td colspan="4" style="color:var(--muted)">暂无文件（先上传话术）</td></tr>`;
 
       const kb = s.config?.knowledge || {};
       const rag = kb.rag || {};
@@ -514,6 +756,62 @@
       $("orderAiProvider").value = ord.intentAi?.provider || "auto";
       $("orderAiModel").value = ord.intentAi?.model || "";
       $("orderTimeoutMs").value = ord.timeoutMs ?? 28000;
+      loadChatLogs().catch(() => {});
+    }
+    const CHAT_PATH_LABEL = {
+      kb: "知识库",
+      order: "查单",
+      llm: "OpenClaw",
+      escalate: "升级",
+      fallback: "兜底",
+      clarify: "澄清",
+      scenario: "场景",
+      error: "出错",
+    };
+    const CHAT_PLAT_LABEL = { meituan: "美团", douyin: "抖音", wecom: "企微" };
+    function chatSentLabel(sent) {
+      if (sent === true) return "已发出";
+      if (sent === false) return "未发出";
+      return "未确认";
+    }
+    function renderChatLogs(items) {
+      const el = $("chatLogList");
+      if (!items || !items.length) {
+        el.textContent = "暂无记录。接待顾客后会出现。";
+        return;
+      }
+      el.innerHTML = items.map((row) => {
+        const t = row.at ? new Date(row.at).toLocaleString() : "";
+        const plat = CHAT_PLAT_LABEL[row.platform] || row.platform || "";
+        const path = CHAT_PATH_LABEL[row.path] || row.path || "—";
+        const sent = chatSentLabel(row.sent);
+        const sentCls = row.sent === true ? "ok" : row.sent === false ? "hold" : "";
+        const kb = row.kb
+          ? (row.kb.hit
+            ? `知识库命中 via=${escapeHtml(row.kb.via || "")} score=${Number(row.kb.score || 0).toFixed(3)} ${escapeHtml(row.kb.source || "")}`
+            : `知识库未命中 ${escapeHtml(row.kb.note || row.kb.error || "")}`)
+          : "";
+        const order = row.order
+          ? `查单 ${escapeHtml(row.order.reason || "")} via=${escapeHtml(row.order.via || "")}${row.order.error ? " " + escapeHtml(row.order.error) : ""}`
+          : "";
+        const llm = row.llm
+          ? `OpenClaw ${row.llm.used ? (row.llm.blocked ? "拦截编造" : row.llm.skip ? "跳过" : "已调用") : "未用"}${row.llm.withKb ? "（带库）" : ""}${row.llm.error ? " " + escapeHtml(row.llm.error) : ""}`
+          : "";
+        const hold = row.holdReason ? ` · ${escapeHtml(row.holdReason)}` : "";
+        const extra = [kb, order, llm].filter(Boolean).join(" · ");
+        return `<article class="chat-log-item">
+          <div class="chat-log-meta"><span>${escapeHtml(t)}</span> · <span>${escapeHtml(plat)}</span> · <b>${escapeHtml(row.customer || "")}</b> · <span class="chip">${escapeHtml(path)}</span> · <span class="chip ${sentCls}">${sent}${hold}</span></div>
+          <div class="chat-log-in">顾客：${escapeHtml(row.inbound || "")}</div>
+          <div class="chat-log-out">回复：${escapeHtml(row.reply || "")}</div>
+          ${extra ? `<div class="chat-log-extra">${extra}</div>` : ""}
+        </article>`;
+      }).join("");
+    }
+    async function loadChatLogs() {
+      const plat = $("chatLogPlat")?.value || "";
+      const q = ($("chatLogQ")?.value || "").trim();
+      const r = await api("/api/chat-logs?limit=80&platform=" + encodeURIComponent(plat) + "&q=" + encodeURIComponent(q));
+      renderChatLogs(r.items || []);
     }
     async function uploadFiles(files) {
       for (const f of files) {
@@ -568,6 +866,11 @@
         ).join("\n---\n");
       } catch (e) { $("searchOut").textContent = e.message; }
     };
+    $("btnChatLogs").onclick = () => loadChatLogs().catch((e) => { $("chatLogList").textContent = e.message; });
+    $("chatLogQ").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") loadChatLogs().catch((err) => { $("chatLogList").textContent = err.message; });
+    });
+    $("chatLogPlat").onchange = () => loadChatLogs().catch(() => {});
     $("btnSaveCfg").onclick = async () => {
       try {
         await api("/api/config", {
@@ -647,16 +950,38 @@
     $("btnReloadEnv").onclick = () => loadEnv().catch((e) => log(e.message, "err"));
     $("btnSaveEnv").onclick = async () => {
       try {
+        const edge = collectEnvPatch(EDGE_ENV_META);
+        const locked = lockedDeployRole();
+        if (locked) edge.DEPLOY_ROLE = locked;
         const r = await api("/api/env", {
           method: "PUT",
           body: JSON.stringify({
-            edge: collectEnvPatch(EDGE_ENV_META),
+            edge,
             brain: collectEnvPatch(BRAIN_ENV_META),
           }),
         });
         log("环境变量已保存" + (r.restartedHint ? "（需重启进程）" : ""), "ok");
         await loadEnv();
+        if (locked && $("env_DEPLOY_ROLE")) $("env_DEPLOY_ROLE").value = locked;
         await refresh();
+      } catch (e) { log(e.message, "err"); }
+    };
+    $("llmProvider").onchange = () => applyLlmPreset($("llmProvider").value);
+    $("btnReloadLlm").onclick = () => loadLlm().catch((e) => log(e.message, "err"));
+    $("btnSaveLlm").onclick = async () => {
+      try {
+        const body = {
+          providerId: $("llmProvider").value,
+          baseUrl: $("llmBaseUrl").value.trim(),
+          modelId: $("llmModelId").value.trim(),
+          apiKeyEnvVar: $("llmEnvVar").value.trim(),
+          apiKey: $("llmApiKey").value,
+        };
+        if (!body.baseUrl) throw new Error("请填写 Base URL");
+        if (!body.modelId) throw new Error("请填写模型 ID");
+        const r = await api("/api/openclaw-llm", { method: "PUT", body: JSON.stringify(body) });
+        log("OpenClaw LLM 已保存" + (r.restartedHint ? "（需重启 Gateway）" : ""), "ok");
+        fillLlmForm(r);
       } catch (e) { log(e.message, "err"); }
     };
 
@@ -682,9 +1007,11 @@
       const portable = $("env_OPENCLAW_PORTABLE_ROOT");
       const ragUrl = $("env_RAG_BASE_URL");
       const deploy = $("env_DEPLOY_ROLE");
+      const locked = lockedDeployRole();
       if ($("wizDeployRole")) {
-        $("wizDeployRole").value = (deploy && deploy.value) || "all";
+        $("wizDeployRole").value = locked || (deploy && deploy.value) || "all";
       }
+      applyLockedRoleUi();
       $("wizPortable").value = (portable && portable.value) || "";
       $("wizRagUrl").value = ($("ragBase") && $("ragBase").value) || (ragUrl && ragUrl.value) || "http://127.0.0.1:8787";
       $("wizRagKey").value = "";
@@ -713,7 +1040,7 @@
       const edgePatch = {
         OPENCLAW_PORTABLE_ROOT: portable,
         RAG_BASE_URL: ragUrl,
-        DEPLOY_ROLE: ($("wizDeployRole") && $("wizDeployRole").value) || "all",
+        DEPLOY_ROLE: lockedDeployRole() || ($("wizDeployRole") && $("wizDeployRole").value) || "all",
       };
       const key = $("wizRagKey").value;
       if (key) edgePatch.RAG_API_KEY = key;
@@ -785,8 +1112,15 @@
     });
 
     async function boot() {
+      // 先填兜底下拉，避免接口慢/失败时服务商为空
+      fillLlmForm({ presets: LLM_PRESET_FALLBACK, providerId: "deepseek" });
+      applyLockedRoleUi();
       await refresh();
       await loadEnv();
+      await loadLlm().catch((e) => log("LLM 配置加载失败（已用本地预设）：" + e.message, "err"));
+      const locked = lockedDeployRole();
+      if (locked && $("env_DEPLOY_ROLE")) $("env_DEPLOY_ROLE").value = locked;
+      applyLockedRoleUi();
       const s = await api("/api/status");
       if (s.needsSetup) {
         $("setupBanner").classList.add("show");

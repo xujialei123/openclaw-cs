@@ -11,6 +11,7 @@
   const chkAuto = document.getElementById("chkAuto");
   const stackHint = document.getElementById("stackHint");
   const roleHint = document.getElementById("roleHint");
+  const editionBadge = document.getElementById("editionBadge");
   const btnPortable = document.getElementById("btnPortable");
   const logView = document.getElementById("logView");
   const btnClearLog = document.getElementById("btnClearLog");
@@ -24,13 +25,28 @@
   const obPortableHint = document.getElementById("obPortableHint");
   const obRagUrl = document.getElementById("obRagUrl");
   const obRagKey = document.getElementById("obRagKey");
+  const obRagHint = document.getElementById("obRagHint");
   const obSummary = document.getElementById("obSummary");
+  const obSub = document.getElementById("obSub");
+  const advancedBar = document.getElementById("advancedBar");
+  const btnToggleAdvanced = document.getElementById("btnToggleAdvanced");
+  const workspace = document.getElementById("workspace");
+  const btnToggleLog = document.getElementById("btnToggleLog");
+  const btnShowLog = document.getElementById("btnShowLog");
 
   let busy = false;
   let loadedAdminUrl = "";
   let needsSetup = false;
+  let advancedOpen = false;
+  let logOpen = false;
   let obStep = 0;
-  const OB_TOTAL = 4;
+  const OB_TOTAL = 3;
+  let packageMeta = {
+    deployRole: "all",
+    packageKind: "fullstack",
+    editionLabel: "全栈版",
+    roleLocked: false,
+  };
 
   function setMsg(text) {
     msg.textContent = text || "";
@@ -47,6 +63,47 @@
     appShell.classList.toggle("setup-locked", needsSetup);
     btnStart.disabled = busy || needsSetup;
     if (onboard) onboard.hidden = !on;
+  }
+
+  function setAdvanced(on) {
+    advancedOpen = !!on;
+    if (advancedBar) advancedBar.hidden = !advancedOpen;
+    if (btnToggleAdvanced) {
+      btnToggleAdvanced.setAttribute("aria-expanded", advancedOpen ? "true" : "false");
+      btnToggleAdvanced.classList.toggle("on", advancedOpen);
+    }
+    document.querySelectorAll(".advanced-only").forEach((el) => {
+      el.classList.toggle("show-advanced", advancedOpen);
+    });
+  }
+
+  function setLogOpen(on) {
+    logOpen = !!on;
+    if (workspace) workspace.classList.toggle("log-collapsed", !logOpen);
+    if (btnToggleLog) btnToggleLog.textContent = logOpen ? "收起" : "展开";
+  }
+
+  function applyPackageMeta(src) {
+    if (!src) return;
+    packageMeta = {
+      deployRole: src.deployRole === "edge" ? "edge" : "all",
+      packageKind: src.packageKind === "edge" ? "edge" : "fullstack",
+      editionLabel: src.editionLabel || (src.deployRole === "edge" ? "边端版" : "全栈版"),
+      roleLocked: src.roleLocked === true || src.packaged === true,
+    };
+    if (editionBadge) editionBadge.textContent = packageMeta.editionLabel;
+    if (obSub) {
+      obSub.textContent =
+        packageMeta.deployRole === "edge"
+          ? "当前为边端版：本机只负责接待，请填写公司话术服务地址。"
+          : "当前为全栈版：话术库与接待都在本机（需 Docker）。";
+    }
+    if (obRagHint) {
+      obRagHint.textContent =
+        packageMeta.deployRole === "edge"
+          ? "填写公司服务器提供的话术服务地址与密钥（不要填本机 127.0.0.1）。"
+          : "全栈版一般使用本机地址；若已预填可直接下一步。";
+    }
   }
 
   function appendLogLine(payload) {
@@ -73,12 +130,27 @@
     }
   }
 
+  function adminUrlWithProduct(url, status) {
+    if (!url) return url;
+    try {
+      const u = new URL(url);
+      u.searchParams.set("product", "1");
+      u.searchParams.set("role", (status && status.deployRole) || packageMeta.deployRole || "all");
+      return u.toString();
+    } catch {
+      const role = (status && status.deployRole) || packageMeta.deployRole || "all";
+      const join = String(url).includes("?") ? "&" : "?";
+      return `${url}${join}product=1&role=${encodeURIComponent(role)}`;
+    }
+  }
+
   function syncFrame(status) {
     if (status.admin && status.adminUrl) {
       empty.hidden = true;
-      if (loadedAdminUrl !== status.adminUrl) {
-        loadedAdminUrl = status.adminUrl;
-        frame.src = status.adminUrl;
+      const next = adminUrlWithProduct(status.adminUrl, status);
+      if (loadedAdminUrl !== next) {
+        loadedAdminUrl = next;
+        frame.src = next;
       }
     } else {
       empty.hidden = false;
@@ -90,23 +162,24 @@
   }
 
   function syncMeta(status) {
+    applyPackageMeta(status);
     chkAuto.checked = status.autoStartOnLaunch !== false;
     const ready = status.readyCount || 0;
     const total = status.totalCount || 6;
-    stackHint.textContent = `${ready}/${total} 核心服务在线`;
+    stackHint.textContent = status.watch
+      ? "自动回复进行中"
+      : status.admin
+        ? `已就绪 ${ready}/${total}`
+        : "尚未开始接待";
     roleHint.textContent = status.portableOk
-      ? `便携包 ${status.portableRoot || ""}`
-      : "未检测到 OpenClaw 便携包";
-    if (emptyHint && status.portableRoot) {
-      emptyHint.textContent = status.portableOk
-        ? `OpenClaw：${status.portableRoot}。Docker 需单独安装（可选，本地库用）。`
-        : `未找到便携包：${status.portableRoot}。`;
+      ? `${packageMeta.editionLabel} · 工作台已就绪`
+      : `${packageMeta.editionLabel} · 工作台未就绪`;
+    if (emptyHint) {
+      emptyHint.textContent =
+        packageMeta.deployRole === "edge"
+          ? "边端版：连接公司服务器，无需本机数据库。"
+          : "全栈版：话术库在本机，需安装 Docker。";
     }
-  }
-
-  function selectedRole() {
-    const el = document.querySelector('input[name="obRole"]:checked');
-    return el ? el.value : "all";
   }
 
   function setObErr(text) {
@@ -125,28 +198,32 @@
     obPrev.disabled = obStep === 0;
     obNext.textContent = obStep === OB_TOTAL - 1 ? "保存并进入" : "下一步";
     setObErr("");
-    if (obStep === 3 && obSummary) {
-      const role = selectedRole() === "edge" ? "仅边端（连远程中台）" : "本机全栈";
+    if (obStep === 2 && obSummary) {
+      const role =
+        packageMeta.deployRole === "edge" ? "边端版（连接公司服务器）" : "全栈版（本机独立）";
       obSummary.innerHTML =
-        `<dt>角色</dt><dd>${role}</dd>` +
-        `<dt>便携包</dt><dd>${obPortable.value.trim() || "（安装包内置 / 待检测）"}</dd>` +
-        `<dt>中台地址</dt><dd>${obRagUrl.value.trim() || "—"}</dd>` +
-        `<dt>API Key</dt><dd>${obRagKey.value ? "已填写" : "沿用已有 / 稍后在配置中心填写"}</dd>`;
+        `<dt>安装包</dt><dd>${role}（已固化，不可更改）</dd>` +
+        `<dt>工作台</dt><dd>${obPortable.value.trim() || "安装版内置 / 自动检测"}</dd>` +
+        `<dt>话术服务</dt><dd>${obRagUrl.value.trim() || "—"}</dd>` +
+        `<dt>访问密钥</dt><dd>${obRagKey.value ? "已填写" : "沿用已有 / 稍后在设置中填写"}</dd>`;
     }
   }
 
   function fillOnboard(setup) {
-    const role = setup.deployRole === "edge" ? "edge" : "all";
-    document.querySelectorAll('input[name="obRole"]').forEach((el) => {
-      el.checked = el.value === role;
-    });
+    applyPackageMeta(setup);
     obPortable.value = setup.portableRoot || "";
     obPortableHint.textContent = setup.portableOk
-      ? "已检测到有效便携包。"
+      ? "已检测到可用工作台。"
       : setup.packaged
-        ? "安装包通常自带便携包；若检测失败请手动选择。"
-        : "请选择含 app\\runtime\\node-win-x64 的 OpenClaw 目录。";
-    obRagUrl.value = setup.ragBaseUrl || "http://127.0.0.1:8787";
+        ? "安装版一般已内置工作台；若检测失败请手动选择。"
+        : "请选择有效的工作台目录（安装人员可协助）。";
+    if (packageMeta.deployRole === "edge") {
+      obRagUrl.value = setup.ragBaseUrl || "";
+      obRagUrl.placeholder = "例如 http://192.168.1.23:8787";
+    } else {
+      obRagUrl.value = setup.ragBaseUrl || "http://127.0.0.1:8787";
+      obRagUrl.placeholder = "http://127.0.0.1:8787";
+    }
     obRagKey.value = "";
     obStep = 0;
     renderObStep();
@@ -155,12 +232,11 @@
   async function openOnboard(setup) {
     fillOnboard(setup || (await window.desktopApi.getSetup()));
     setSetupLock(true);
-    setMsg("请先完成启动配置引导");
+    setMsg("请先完成初次设置");
   }
 
   async function finishOnboard() {
     const body = {
-      deployRole: selectedRole(),
       portableRoot: obPortable.value.trim(),
       ragBaseUrl: obRagUrl.value.trim(),
       ragApiKey: obRagKey.value,
@@ -168,8 +244,8 @@
     const r = await window.desktopApi.saveSetup(body);
     if (!r.ok) throw new Error(r.error || "保存失败");
     setSetupLock(false);
-    setMsg("配置已保存。可以点击「启动全部」。");
-    appendLogLine({ stream: "out", line: "启动引导已完成，配置已写入 .env。\n" });
+    setMsg("设置已保存。可以点击「开始接待」。");
+    appendLogLine({ stream: "out", line: "初次设置已完成。\n" });
     await refresh();
   }
 
@@ -185,17 +261,19 @@
         setSetupLock(false);
       }
       if (status.starting) {
-        setMsg("正在启动全部服务…左侧可看实时日志");
+        setMsg("正在开始接待…可在左侧查看进度");
       } else if (status.stopping) {
-        setMsg("正在停止全部服务…");
+        setMsg("正在停止接待…");
       } else if (status.needsSetup) {
-        setMsg("请先完成启动配置引导");
+        setMsg("请先完成初次设置");
       } else if (!status.portableOk) {
-        setMsg(status.lastError || "OpenClaw 便携包缺失，无法一键启动。");
+        setMsg(status.lastError || "工作台未就绪，无法开始接待。");
+      } else if (status.watch) {
+        setMsg("自动回复进行中");
       } else if (status.admin) {
-        setMsg(`一体端就绪 · ${status.readyCount}/${status.totalCount} 在线`);
+        setMsg(`已就绪 · 点击「开始接待」即可`);
       } else {
-        setMsg(status.lastError || "服务未启动。点击「启动全部」，左侧会输出启动日志。");
+        setMsg(status.lastError || "尚未开始接待。点击「开始接待」即可。");
       }
     } catch (e) {
       setMsg(String(e && e.message ? e.message : e));
@@ -205,19 +283,19 @@
   btnStart.addEventListener("click", async () => {
     if (busy) return;
     if (needsSetup) {
-      setMsg("请先完成启动配置引导");
+      setMsg("请先完成初次设置");
       if (onboard) onboard.hidden = false;
       return;
     }
     setBusy(true);
-    setMsg("正在启动全部服务…");
+    setMsg("正在开始接待…");
     try {
       const r = await window.desktopApi.startAll();
       if (r && r.needsSetup) {
         await openOnboard();
-        setMsg(r.error || "请先完成配置");
+        setMsg(r.error || "请先完成设置");
       } else {
-        setMsg(r.ok ? "启动流程结束，请看左侧日志与上方状态灯" : r.error || "启动失败");
+        setMsg(r.ok ? "已启动，请查看左侧动态与上方状态" : r.error || "启动失败");
       }
     } finally {
       setBusy(false);
@@ -228,10 +306,10 @@
   btnStop.addEventListener("click", async () => {
     if (busy) return;
     setBusy(true);
-    setMsg("正在停止全部服务…");
+    setMsg("正在停止接待…");
     try {
       const r = await window.desktopApi.stopAll();
-      setMsg(r.ok ? "已全部停止" : r.error || "停止失败");
+      setMsg(r.ok ? "已停止接待" : r.error || "停止失败");
     } finally {
       setBusy(false);
       loadedAdminUrl = "";
@@ -241,14 +319,14 @@
   });
 
   btnRefresh.addEventListener("click", () => refresh());
-  btnLogs.addEventListener("click", () => window.desktopApi.openLogs());
+  if (btnLogs) btnLogs.addEventListener("click", () => window.desktopApi.openLogs());
   btnAdmin.addEventListener("click", async () => {
     const url = await window.desktopApi.reloadAdmin();
     if (url) {
       loadedAdminUrl = "";
-      frame.src = url;
+      frame.src = adminUrlWithProduct(url);
       empty.hidden = true;
-      setMsg(`已在客户端内刷新配置页 · ${url}`);
+      setMsg("已刷新店铺设置页");
     }
   });
   if (btnPortable) {
@@ -258,10 +336,19 @@
     });
   }
   if (btnClearLog) btnClearLog.addEventListener("click", () => clearLog());
+  if (btnToggleAdvanced) {
+    btnToggleAdvanced.addEventListener("click", () => setAdvanced(!advancedOpen));
+  }
+  if (btnToggleLog) {
+    btnToggleLog.addEventListener("click", () => setLogOpen(!logOpen));
+  }
+  if (btnShowLog) {
+    btnShowLog.addEventListener("click", () => setLogOpen(true));
+  }
 
   chkAuto.addEventListener("change", async () => {
     await window.desktopApi.setPrefs({ autoStartOnLaunch: chkAuto.checked });
-    setMsg(chkAuto.checked ? "已开启：下次打开自动启动全部服务" : "已关闭自动启动");
+    setMsg(chkAuto.checked ? "已开启：下次打开自动开始接待" : "已关闭自动开始");
   });
 
   obBrowse.addEventListener("click", async () => {
@@ -273,7 +360,7 @@
       return;
     }
     obPortable.value = r.path;
-    obPortableHint.textContent = "已选择有效便携包。";
+    obPortableHint.textContent = "已选择可用工作台。";
     setObErr("");
   });
 
@@ -286,12 +373,20 @@
 
   obNext.addEventListener("click", async () => {
     try {
-      if (obStep === 1) {
+      if (obStep === 0) {
         const p = obPortable.value.trim();
-        if (!p) throw new Error("请填写或选择 OpenClaw 便携包路径");
+        if (!p && !packageMeta.roleLocked) {
+          // 开发态可要求填写；安装版常靠内置路径，允许空并在保存时校验
+        }
       }
-      if (obStep === 2) {
-        if (!obRagUrl.value.trim()) throw new Error("请填写中台地址");
+      if (obStep === 1) {
+        if (!obRagUrl.value.trim()) throw new Error("请填写话术服务地址");
+        if (
+          packageMeta.deployRole === "edge" &&
+          /127\.0\.0\.1|localhost/i.test(obRagUrl.value)
+        ) {
+          throw new Error("边端版请填写公司服务器地址，不要使用本机 127.0.0.1");
+        }
       }
       if (obStep === OB_TOTAL - 1) {
         obNext.disabled = true;
@@ -325,20 +420,21 @@
   window.desktopApi.onReloadAdmin((url) => {
     if (!url) return;
     loadedAdminUrl = "";
-    frame.src = url;
+    frame.src = adminUrlWithProduct(url);
     empty.hidden = true;
   });
 
   clearLog();
   appendLogLine({
     stream: "out",
-    line:
-      "OpenClaw 客服一体端已就绪。\n" +
-      "未配置时会先进入启动引导；完成后即可「启动全部」。\n",
+    line: "智能客服已打开。完成设置后，点击「开始接待」即可。\n",
   });
+  setAdvanced(false);
+  setLogOpen(false);
 
   (async () => {
     const setup = await window.desktopApi.getSetup();
+    applyPackageMeta(setup);
     if (setup.needsSetup) await openOnboard(setup);
     await refresh();
   })();

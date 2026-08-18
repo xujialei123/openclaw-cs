@@ -5,6 +5,7 @@
  *   - 白名单 / knowledge.mode / rag.* 写本地 cs-runtime.json
  *   - GET/PUT /api/env 读写根目录 .env 与 brain/.env（白名单键；密钥不回传明文）
  *   - 上传 / 编译 / KB 列表 / 试检索 → 8787
+ *   - GET /api/chat-logs 读 memory/chat-trace.jsonl
  *   - local 降级时仍可触发本机 kb-wiki / kb-index
  *
  * @usage
@@ -19,6 +20,7 @@ const path = require("path");
 const { URL } = require("url");
 
 const ROOT = path.join(__dirname, "..");
+const { readChatTraces, defaultTracePath } = require(path.join(ROOT, "apps", "edge-worker", "chat-trace"));
 const DEFAULT_CONFIG = path.join(ROOT, "config", "cs-runtime.json");
 const ADMIN_HTML = path.join(ROOT, "admin", "index.html");
 const ADMIN_DIR = path.join(ROOT, "admin");
@@ -30,11 +32,14 @@ const EDGE_ENV_KEYS = [
   "DEPLOY_ROLE",
   "OPENCLAW_PORTABLE_ROOT",
   "BRAIN_ROOT",
+  "SKELETON_ROOT",
   "ADMIN_PORT",
   "OPENCLAW_GATEWAY_URL",
   "OPENCLAW_CDP_URL",
   "RAG_BASE_URL",
   "RAG_API_KEY",
+  "WECOM_AIBOT_ID",
+  "WECOM_AIBOT_SECRET",
 ];
 const BRAIN_ENV_KEYS = [
   "DATABASE_URL",
@@ -48,6 +53,9 @@ const BRAIN_ENV_KEYS = [
   "EMBEDDING_API_KEY",
   "EMBEDDING_MODEL",
   "EMBEDDING_DIM",
+  "LLM_API_KEY",
+  "LLM_BASE_URL",
+  "LLM_MODEL",
 ];
 const SECRET_ENV_KEYS = new Set([
   "RAG_API_KEY",
@@ -56,7 +64,80 @@ const SECRET_ENV_KEYS = new Set([
   "ADMIN_PASSWORD",
   "LLM_API_KEY",
   "AGNES_API_KEY",
+  "DEEPSEEK_API_KEY",
+  "OPENCLAW_USB_DEEPSEEK_API_KEY",
+  "OPENCLAW_LLM_API_KEY",
+  "DASHSCOPE_API_KEY",
+  "MOONSHOT_API_KEY",
+  "WECOM_AIBOT_SECRET",
 ]);
+
+/** OpenAI-compatible presets only (Claude official Messages API excluded). Verified 2026-08. */
+const OPENCLAW_LLM_PRESETS = [
+  {
+    id: "deepseek",
+    label: "DeepSeek",
+    baseUrl: "https://api.deepseek.com",
+    envVar: "OPENCLAW_USB_DEEPSEEK_API_KEY",
+    aliasEnvVars: ["DEEPSEEK_API_KEY"],
+    suggestModel: "deepseek-v4-flash",
+    modelHints: ["deepseek-v4-flash", "deepseek-v4-pro"],
+  },
+  {
+    id: "dashscope",
+    label: "通义千问 · 国内",
+    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    envVar: "DASHSCOPE_API_KEY",
+    aliasEnvVars: [],
+    suggestModel: "qwen-plus",
+    modelHints: ["qwen-plus", "qwen-flash", "qwen-max", "qwen3.8-max"],
+  },
+  {
+    id: "dashscope-intl",
+    label: "通义千问 · 国际",
+    baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    envVar: "DASHSCOPE_API_KEY",
+    aliasEnvVars: [],
+    suggestModel: "qwen-plus",
+    modelHints: ["qwen-plus", "qwen-flash", "qwen-max", "qwen3.8-max"],
+  },
+  {
+    id: "moonshot",
+    label: "Kimi · 国内",
+    baseUrl: "https://api.moonshot.cn/v1",
+    envVar: "MOONSHOT_API_KEY",
+    aliasEnvVars: [],
+    suggestModel: "kimi-k3",
+    modelHints: ["kimi-k3", "kimi-k2.6"],
+  },
+  {
+    id: "moonshot-intl",
+    label: "Kimi · 国际",
+    baseUrl: "https://api.moonshot.ai/v1",
+    envVar: "MOONSHOT_API_KEY",
+    aliasEnvVars: [],
+    suggestModel: "kimi-k3",
+    modelHints: ["kimi-k3", "kimi-k2.6"],
+  },
+  {
+    id: "openai",
+    label: "OpenAI",
+    baseUrl: "https://api.openai.com/v1",
+    envVar: "OPENCLAW_LLM_API_KEY",
+    aliasEnvVars: ["OPENAI_API_KEY"],
+    suggestModel: "gpt-4o-mini",
+    modelHints: ["gpt-4o-mini", "gpt-4o"],
+  },
+  {
+    id: "agnes",
+    label: "Agnes",
+    baseUrl: "https://apihub.agnes-ai.com/v1",
+    envVar: "AGNES_API_KEY",
+    aliasEnvVars: [],
+    suggestModel: "agnes-2.0-flash",
+    modelHints: ["agnes-2.0-flash"],
+  },
+];
 
 function parseDotEnv(text) {
   const map = {};
@@ -134,6 +215,178 @@ function publicEnvView(filePath, allowKeys) {
     };
   }
   return out;
+}
+
+function resolvePortableRootFromEnv() {
+  const edgeMap = fs.existsSync(EDGE_ENV) ? parseDotEnv(fs.readFileSync(EDGE_ENV, "utf8")) : {};
+  return String(
+    edgeMap.OPENCLAW_PORTABLE_ROOT ||
+      process.env.OPENCLAW_PORTABLE_ROOT ||
+      "F:\\OpenClaw-USB-Portable"
+  ).trim();
+}
+
+function openclawStatePaths() {
+  const portableRoot = resolvePortableRootFromEnv();
+  const stateDir = path.join(portableRoot, "data", ".openclaw");
+  return {
+    portableRoot,
+    stateDir,
+    configPath: path.join(stateDir, "openclaw.json"),
+    envPath: path.join(stateDir, ".env"),
+  };
+}
+
+function extractEnvVarRef(apiKeyField) {
+  const s = String(apiKeyField || "").trim();
+  const m = s.match(/^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$/);
+  return m ? m[1] : "";
+}
+
+function splitPrimaryModel(primary) {
+  const s = String(primary || "").trim();
+  const i = s.indexOf("/");
+  if (i < 1) return { providerId: "", modelId: s };
+  return { providerId: s.slice(0, i), modelId: s.slice(i + 1) };
+}
+
+function readOpenClawLlmState() {
+  const paths = openclawStatePaths();
+  const cfgExists = fs.existsSync(paths.configPath);
+  const envExists = fs.existsSync(paths.envPath);
+  const cfg = cfgExists ? loadJson(paths.configPath, {}) : {};
+  const envMap = envExists ? parseDotEnv(fs.readFileSync(paths.envPath, "utf8")) : {};
+  const primary = String(cfg?.agents?.defaults?.model?.primary || "").trim();
+  const { providerId: primaryProvider, modelId: primaryModelId } = splitPrimaryModel(primary);
+  const providersIn = cfg?.models?.providers && typeof cfg.models.providers === "object"
+    ? cfg.models.providers
+    : {};
+  const providers = Object.keys(providersIn).map((id) => {
+    const p = providersIn[id] || {};
+    const envVar = extractEnvVarRef(p.apiKey) || "";
+    const models = Array.isArray(p.models)
+      ? p.models.map((m) => (typeof m === "string" ? m : m?.id)).filter(Boolean)
+      : [];
+    return {
+      id,
+      baseUrl: String(p.baseUrl || ""),
+      api: String(p.api || "openai-completions"),
+      modelIds: models,
+      apiKeyEnvVar: envVar,
+      apiKeySet: envVar ? Boolean(envMap[envVar]) : Boolean(String(p.apiKey || "").trim() && !String(p.apiKey).includes("${")),
+    };
+  });
+  const activeId = primaryProvider || providers[0]?.id || "deepseek";
+  const active = providers.find((p) => p.id === activeId) || providers[0] || null;
+  const preset = OPENCLAW_LLM_PRESETS.find((p) => p.id === activeId) || null;
+  return {
+    ok: true,
+    ...paths,
+    configExists: cfgExists,
+    envExists,
+    primaryModel: primary,
+    providerId: activeId,
+    modelId: primaryModelId || active?.modelIds?.[0] || preset?.suggestModel || "",
+    baseUrl: active?.baseUrl || preset?.baseUrl || "",
+    apiKeyEnvVar: active?.apiKeyEnvVar || preset?.envVar || "OPENCLAW_LLM_API_KEY",
+    apiKeySet: active?.apiKeySet || false,
+    providers,
+    presets: OPENCLAW_LLM_PRESETS,
+    note:
+      "写入便携包 data\\.openclaw\\openclaw.json 与 .env。改完后需重启 OpenClaw Gateway（Stop-All 再 Start-All / 开始接待）才生效。密钥不回传明文。",
+  };
+}
+
+function applyOpenClawLlmPatch(body) {
+  const paths = openclawStatePaths();
+  if (!paths.portableRoot || !fs.existsSync(paths.portableRoot)) {
+    throw new Error(`便携包目录不存在：${paths.portableRoot}（请先在环境变量里配置 OPENCLAW_PORTABLE_ROOT）`);
+  }
+  fs.mkdirSync(paths.stateDir, { recursive: true });
+  const cfg = fs.existsSync(paths.configPath) ? loadJson(paths.configPath, {}) : {};
+  const providerId = String(body.providerId || "deepseek").trim() || "deepseek";
+  const preset = OPENCLAW_LLM_PRESETS.find((p) => p.id === providerId);
+  const baseUrl = String(body.baseUrl || preset?.baseUrl || "").trim().replace(/\/$/, "");
+  const modelId = String(body.modelId || preset?.suggestModel || "").trim();
+  if (!baseUrl) throw new Error("请填写 Base URL");
+  if (!modelId) throw new Error("请填写模型 ID");
+  const envVar =
+    String(body.apiKeyEnvVar || preset?.envVar || "OPENCLAW_LLM_API_KEY").trim() ||
+    "OPENCLAW_LLM_API_KEY";
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(envVar)) {
+    throw new Error("apiKey 环境变量名不合法");
+  }
+
+  cfg.gateway = cfg.gateway || {
+    mode: "local",
+    port: 18789,
+    bind: "loopback",
+    auth: { mode: "token" },
+  };
+  cfg.agents = cfg.agents || {};
+  cfg.agents.defaults = cfg.agents.defaults || {};
+  cfg.agents.defaults.model = {
+    ...(cfg.agents.defaults.model || {}),
+    primary: `${providerId}/${modelId}`,
+  };
+  cfg.models = cfg.models || { mode: "merge", providers: {} };
+  cfg.models.mode = cfg.models.mode || "merge";
+  cfg.models.providers = cfg.models.providers || {};
+  const prev = cfg.models.providers[providerId] || {};
+  const prevModels = Array.isArray(prev.models) ? prev.models : [];
+  const hasModel = prevModels.some((m) => (typeof m === "string" ? m : m?.id) === modelId);
+  const nextModels = hasModel
+    ? prevModels
+    : [...prevModels, { id: modelId, name: modelId }];
+  cfg.models.providers[providerId] = {
+    ...prev,
+    baseUrl,
+    api: String(body.api || prev.api || "openai-completions"),
+    apiKey: `\${${envVar}}`,
+    models: nextModels.length ? nextModels : [{ id: modelId, name: modelId }],
+  };
+  if (!cfg.browser?.ssrfPolicy) {
+    cfg.browser = cfg.browser || {};
+    cfg.browser.ssrfPolicy = {
+      dangerouslyAllowPrivateNetwork: true,
+      allowedHostnames: [
+        "g.dianping.com",
+        "www.dianping.com",
+        "life.douyin.com",
+        "www.douyin.com",
+        "yl-saas.xiyihangye.com",
+        "127.0.0.1",
+        "localhost",
+      ],
+    };
+  }
+  saveJson(paths.configPath, cfg);
+
+  const envPatch = {};
+  const apiKey = body.apiKey != null ? String(body.apiKey) : "";
+  if (apiKey) {
+    envPatch[envVar] = apiKey;
+    const aliases = preset?.aliasEnvVars || [];
+    for (const a of aliases) envPatch[a] = apiKey;
+  }
+  if (Object.keys(envPatch).length) {
+    const allow = Array.from(
+      new Set([
+        envVar,
+        ...(preset?.aliasEnvVars || []),
+        "AGNES_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "OPENCLAW_USB_DEEPSEEK_API_KEY",
+        "OPENCLAW_LLM_API_KEY",
+        "OPENAI_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MOONSHOT_API_KEY",
+      ])
+    );
+    upsertDotEnv(paths.envPath, envPatch, allow);
+  }
+
+  return readOpenClawLlmState();
 }
 
 /** 是否需要弹出首次分步引导（未点过「完成」且关键路径/中台未就绪） */
@@ -387,6 +640,16 @@ function createServer(ctx) {
         return;
       }
 
+      if (method === "GET" && u.pathname === "/api/chat-logs") {
+        const rt = runtime();
+        const file = rt.chatTraceFile || defaultTracePath(ROOT);
+        const limit = Number(u.searchParams.get("limit") || 80);
+        const platform = u.searchParams.get("platform") || "";
+        const q = u.searchParams.get("q") || "";
+        sendJson(res, 200, readChatTraces(file, { limit, platform, q }));
+        return;
+      }
+
       if (method === "GET" && u.pathname === "/api/status") {
         ensureRuntimeFile(ctx.configPath);
         const rt = runtime();
@@ -621,8 +884,33 @@ function createServer(ctx) {
           brainPath: BRAIN_ENV,
           edge: publicEnvView(EDGE_ENV, EDGE_ENV_KEYS),
           brain: publicEnvView(BRAIN_ENV, BRAIN_ENV_KEYS),
-          note: "密钥字段 GET 不回传明文；保存时留空表示不修改。改完需重启 Start-All / rag-service 才完全生效。",
+          note: "密钥字段 GET 不回传明文；保存时留空表示不修改。改完需重启 Start-All / rag-service 才完全生效。OpenClaw 对话模型请用下方「OpenClaw LLM」卡片。",
         });
+        return;
+      }
+
+      if (method === "GET" && u.pathname === "/api/openclaw-llm") {
+        try {
+          sendJson(res, 200, readOpenClawLlmState());
+        } catch (e) {
+          sendJson(res, 500, { ok: false, error: e.message || String(e) });
+        }
+        return;
+      }
+
+      if (method === "PUT" && u.pathname === "/api/openclaw-llm") {
+        try {
+          const body = JSON.parse((await readBody(req)).toString("utf8") || "{}");
+          const state = applyOpenClawLlmPatch(body || {});
+          sendJson(res, 200, {
+            ok: true,
+            ...state,
+            restartedHint:
+              "Restart OpenClaw Gateway (Stop-All then Start-All / 开始接待) to reload LLM config.",
+          });
+        } catch (e) {
+          sendJson(res, 400, { ok: false, error: e.message || String(e) });
+        }
         return;
       }
 

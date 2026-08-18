@@ -1,0 +1,8 @@
+{
+  "packageKind": "fullstack",
+  "deployRole": "all",
+  "displayName": "智能客服",
+  "editionLabel": "全栈版",
+  "shortcutName": "智能客服（全栈）",
+  "roleLocked": true
+}

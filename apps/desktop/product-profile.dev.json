@@ -1,0 +1,9 @@
+{
+  "packageKind": "fullstack",
+  "deployRole": "all",
+  "displayName": "智能客服",
+  "editionLabel": "全栈版",
+  "shortcutName": "智能客服",
+  "roleLocked": false,
+  "_comment": "Dev default template for Pack-Desktop restore. Pack uses product-profile.edge.json / product-profile.fullstack.json."
+}

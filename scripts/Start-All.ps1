@@ -285,6 +285,8 @@ $env:OPENCLAW_STATE_DIR = Join-Path $PortableRoot "data\.openclaw"
 $env:OPENCLAW_CONFIG_PATH = Join-Path $PortableRoot "data\.openclaw\openclaw.json"
 $env:PATH = "$(Join-Path $PortableRoot 'app\runtime\node-win-x64');$env:PATH"
 $env:OPENCLAW_PORTABLE_ROOT = $PortableRoot
+# Load LLM API keys for gateway child process / current session
+Import-DotEnv (Join-Path $PortableRoot "data\.openclaw\.env")
 Set-Location $PortableRoot
 
 $gwOk = Ensure-OpenClawGateway -Portable $PortableRoot -Port $gatewayPort

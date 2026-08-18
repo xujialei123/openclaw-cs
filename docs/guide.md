@@ -47,8 +47,8 @@
 也可在边端配置页底部 **「环境变量（.env）」** 编辑常用项（`http://127.0.0.1:18790/`）：
 
 - **首次 / 未配好时**：
-  - **一体端**：缺便携包或中台地址时，启动后**先全屏引导**（角色 → 运行时 → 中台 → 确认），未完成前不能「启动全部」。
-  - **配置中心**：管理台就绪后仍可点「分步引导配置」细调平台/白名单/查单。
+  - **一体端（智能客服）**：缺工作台或话术服务地址时，启动后**先全屏引导**（工作台 → 话术服务 → 确认），未完成前不能「开始接待」。**边端/全栈角色由安装包固化**，引导里不再选择。
+  - **配置中心**：管理台就绪后仍可点「分步引导」细调平台/白名单/查单。一体端内嵌时带 `?product=1&role=edge|all`，会隐藏研发导航并锁定 DEPLOY_ROLE。
 - 只暴露白名单字段（路径、`DEPLOY_ROLE`、`RAG_*`、`EMBEDDING_*`、`DATABASE_URL` 等）
 - 密钥 GET 不回传明文；保存时**留空 = 不修改**
 - 保存 `RAG_BASE_URL` / `RAG_API_KEY` 时会同步进 `cs-runtime.json`
@@ -102,7 +102,9 @@ F:\openclawProject\brain\.env.example → brain\.env
 | `RAG_API_KEY` | 与边端一致 |
 | `EMBEDDING_*` | 千问 DashScope |
 
-可选：`LLM_*`、`ORDER_*` / `ADMIN_*`（自有系统查单预留）。
+可选：`LLM_*`（中台侧预留）、`ORDER_*` / `ADMIN_*`（自有系统查单预留）。
+
+**OpenClaw 对话模型**（Gateway 用的 API Key / Base URL / 主模型）：在配置中心 **「OpenClaw LLM」** 卡片填写并保存，写入便携包 `data\.openclaw\openclaw.json` 与 `.env`（不是本仓根 `.env`）。改完后需重启 Gateway（Stop-All 再 Start-All / 一体端「开始接待」）。
 
 > 若你「看不到 .env」：资源管理器可能隐藏了点文件；在 Cursor 里打开本仓根目录应能看到 `.env` / `.env.example`。骨架 `.env` 在骨架根目录，不在本仓。
 
@@ -113,7 +115,7 @@ F:\openclawProject\brain\.env.example → brain\.env
 
 ```powershell
 npm start                 # 推荐：infra + rag + 控制台 + Gateway/浏览器 + cs-watch
-npm run desktop           # 桌面托盘端：启停 Start-All + 内嵌管理台
+npm run desktop           # 桌面端「智能客服」：启停接待 + 内嵌店铺设置
 npm run start:watch       # 只起 Gateway/浏览器 + 巡检（不开 Docker/rag）
 npm run edge              # 仅巡检进程（需 18800 已就绪）
 npm run edge:dev          # 开发：改 apps/edge-worker 代码自动重启进程
@@ -122,18 +124,28 @@ npm run stop
 # 说明：cs-runtime.json / 白名单每轮热读；改 JS 需 edge:dev 或重启巡检
 ```
 
-桌面端说明见 [`apps/desktop/README.md`](../apps/desktop/README.md)。**关闭窗口或托盘「退出」都会先 `Stop-All` 再退出**（最小化窗口不会停服务）。
+桌面端说明见 [`apps/desktop/README.md`](../apps/desktop/README.md)。**关闭窗口或托盘「退出」都会先停止接待再退出**（最小化窗口不会停）。
 
-**配置页位置**：一体端窗口右侧 **「配置中心」**（内嵌 `http://127.0.0.1:18790/`），不弹系统浏览器；管理台绿灯后点「刷新配置页」。桌面壳改 `apps/desktop/ui/`；配置台/教程改 `admin/docs.css`、`admin/config.css`、`admin/index.html`（重启管理台或点刷新配置页）。独立「日志页」没有——启动日志在桌面左栏，配置台内有操作日志面板。
+**配置页位置**：一体端窗口右侧 **「店铺设置」**（内嵌 `http://127.0.0.1:18790/?product=1`）。日常默认**收起左侧运行记录**（点「运行记录」可展开）；配置页在 `product=1` 下会隐藏研发入口与骨架链接。改桌面壳后重启一体端；配置页点「刷新设置」。
+
 
 打 Windows 安装包（默认内置精简 OpenClaw 便携包，**不含登录态**）：
 
 ```powershell
-npm run desktop:dist
-# 产物：dist-pack/desktop/OpenClawDesktop-Setup-*.exe（0.2.4+；勿用旧的 OpenClaw-CS-Setup 名）
+npm run desktop:dist          # 一次打边端 + 全栈两个安装包
+npm run desktop:dist:edge     # 仅边端 OpenClawDesktop-Setup-Edge-*.exe
+npm run desktop:dist:full     # 仅全栈 OpenClawDesktop-Setup-Full-*.exe
+# 产物：dist-pack/desktop/（0.2.6+；勿用旧的 OpenClaw-CS-Setup 名）
 ```
 
-装机后直接「启动全部」，再在托管浏览器扫码登录即可。若打包时加 `-SkipPortable`，则需手动选便携包目录。
+**角色在打包时固化**，装机后引导不再选「全栈 / 边端」：
+
+| 安装包 | 固化 | 首次引导 |
+|---|---|---|
+| Edge | `DEPLOY_ROLE=edge` | 填公司话术服务地址 |
+| Full | `DEPLOY_ROLE=all` | 默认本机 `8787`，需 Docker |
+
+装机后点「开始接待」，再在托管浏览器扫码登录即可。若打包时加 `-SkipPortable`，则需手动选工作台目录。
 
 覆盖安装前先从托盘退出一体端。若安装器提示「无法关闭」：
 
@@ -176,6 +188,26 @@ RAG_API_KEY=...
 
 生产配置样例：`config/cs-runtime.prod.example.json`（`fallbackLocal=false`）。
 
+### 本机当中台（其他电脑连你）
+
+只起 Docker + rag-service（+ 本机配置台），**不起** OpenClaw / 巡检：
+
+```powershell
+npm run start:mid
+# 或双击 scripts\Start-Mid.bat
+```
+
+脚本结束会打印本机局域网 IP，例如：
+
+```env
+DEPLOY_ROLE=edge
+RAG_BASE_URL=http://192.168.1.23:8787
+RAG_API_KEY=（与本机 brain\.env 一致）
+```
+
+其他电脑装一体端 → 引导选「仅边端」→ 填上面三项 → 启动。  
+请放行防火墙 **TCP 8787**；本机勿休眠。停止中台：`npm run stop:mid`（默认保留 Docker）。
+
 仅基础设施：
 
 ```powershell
@@ -199,6 +231,7 @@ RAG_API_KEY=...
 .\scripts\Stop-All.ps1 -StopDocker      # 额外停 Postgres/Redis 容器
 .\scripts\Stop-All.ps1 -StopBrowser     # 尝试关 OpenClaw 浏览器
 .\scripts\Stop-All.ps1 -KeepRag         # 保留 8787
+npm run stop:mid                        # 只停中台 rag/配置台（不停巡检）
 ```
 
 | 入口 | 地址 |
@@ -215,7 +248,8 @@ RAG_API_KEY=...
 1. OpenClaw 橙框浏览器已登录 **美团经营宝**、**抖音来客**。
 2. `config/cs-runtime.json` 中白名单正确（测试期只开指定顾客）。
 3. `knowledge.mode` 为 `remote`，`rag.kbIds` 已填中台知识库 ID。
-4. 日志 `memory/cs-watch.log` 出现 `TICK` / `MEITUAN` / `DOUYIN`，检索优先见 `KB_HIT via=remote`。
+4. 日志 `memory/cs-watch.log` 出现 `TICK` / `MEITUAN` / `DOUYIN`，检索优先见 `KB_HIT via=remote`。  
+   对话排查看配置台 **聊天日志**（或 `memory/chat-trace.jsonl`）：顾客原文、走了查单/知识库/OpenClaw、回复是否发出。
 
 ### 美团慢回 / 不回（先看日志）
 
@@ -246,6 +280,29 @@ RAG_API_KEY=...
 | 美团/抖音 · 自动发送 | `platforms.*.autoSend` | 仍识别/生成回复，只进 `pending` 不发出 |
 
 全局 `autoSend: false` 仍会关掉所有平台发送。保存后下个 tick 生效。
+
+### OpenClaw LLM（API Key / 模型 / Base URL）
+
+配置中心底部 **「OpenClaw LLM」** 卡片可直接改 Gateway 对话模型，无需手改便携包文件：
+
+1. 选服务商（下拉有官方核对过的预设）  
+2. Base URL / 模型 ID 会自动填好；再填 API Key（留空=不改已有密钥）  
+3. 点「保存 LLM 配置」→ 写入便携包 `data\.openclaw\openclaw.json` + `.env`  
+4. **重启 Gateway**（Stop-All 再 Start-All，或一体端停止接待后再开始）
+
+| 服务商 | Base URL | 默认模型 ID |
+|---|---|---|
+| DeepSeek | `https://api.deepseek.com` | `deepseek-v4-flash`（也可 `deepseek-v4-pro`） |
+| 通义千问 · 国内 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| 通义千问 · 国际 | `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| Kimi · 国内 | `https://api.moonshot.cn/v1` | `kimi-k3` |
+| Kimi · 国际 | `https://api.moonshot.ai/v1` | `kimi-k3` |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| Agnes | `https://apihub.agnes-ai.com/v1` | `agnes-2.0-flash` |
+
+说明：仅收录 **OpenAI 兼容** 接口；Claude 官方 Messages API 未接入。国内/国际 Key 账号不通用，选错区会鉴权失败。
+
+边端 / 中台其它变量仍在同页 **「环境变量（.env）」**（含企微 BotId/Secret、Embedding 等）。
 
 ### OpenClaw「browser navigation blocked by policy」
 
@@ -353,10 +410,20 @@ RAG_API_KEY=...
 
 ### 看是否自动回复
 
-关注日志关键字：
+配置台打开 **聊天日志**（一体端店铺设置里同一块）：一条记录对应一次顾客来信。
+
+| 字段 | 含义 |
+|---|---|
+| 路径 知识库 / 查单 / OpenClaw | 最终用哪条链路生成回复 |
+| 知识库命中 `via=remote` | 中台检索成功；`未命中` 才走兜底或闲聊 |
+| 已发出 / 未发出 | 是否点了发送；未发出常见原因：升级、自动发送关、发送未确认 |
+| 拦截编造 | OpenClaw 写出了库外事实，已丢掉改用库内或澄清 |
+
+也可直接打开 `memory/chat-trace.jsonl`（一行一条 JSON）。巡检过程日志仍是 `memory/cs-watch.log`：
 
 - `detect` → 识别到顾客句  
 - `KB_HIT via=remote` / `KB_MISS`  
+- `ORDER_LOOKUP` / `LLM_CHAT`  
 - `send {"ok":true}` / `settle ok`
 
 ### 常见问题

@@ -158,6 +158,25 @@ button.secondary:hover { background: var(--bg2); }
   color: #fff;
   border-color: var(--accent);
 }
+.chat-log-list {
+  margin-top: 12px;
+  max-height: 420px;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+.chat-log-item {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  font-size: 13px;
+}
+.chat-log-meta,
+.chat-log-extra {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0;
+}
 @media (max-width: 720px) {
   .row, .row3 { grid-template-columns: 1fr; }
   main { padding: 16px; }

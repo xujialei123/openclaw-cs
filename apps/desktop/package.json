@@ -1,8 +1,8 @@
 {
   "name": "openclaw-desktop",
-  "version": "0.2.4",
+  "version": "0.2.6",
   "private": true,
-  "description": "OpenClaw CS desktop shell (tray + embedded admin console)",
+  "description": "智能客服桌面端（托盘 + 内嵌店铺设置；边端/全栈双安装包）",
   "main": "main.js",
   "author": "OpenClaw CS",
   "scripts": {

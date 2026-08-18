@@ -129,7 +129,7 @@
         <span class="why">UI 写回 cs-runtime；当前本机也可能是 <code>kb-admin-server.js</code> 托管同一套 admin 页。</span>
       </li>
       <li>
-        <strong>看启动与产物</strong> · <code>scripts/Start-All.ps1</code> + <code>memory/cs-watch.log</code>
+        <strong>看启动与产物</strong> · <code>scripts/Start-All.ps1</code> + <code>memory/cs-watch.log</code> / <code>memory/chat-trace.jsonl</code>
         <span class="why">联调时日志标签（MEITUAN / KB_HIT / ORDER_LOOKUP）是最好的调试入口。</span>
       </li>
     </ol>
@@ -142,6 +142,7 @@
         <p>坐席机：浏览器巡检、发消息、本地降级检索、查单 Adapter。</p>
         <ul>
           <li><code>apps/edge-worker</code> — cs-watch / order / kb</li>
+          <li><code>apps/desktop</code> — 「智能客服」一体端（Electron）</li>
           <li><code>apps/console</code> — Next 配置台（可选）</li>
           <li>OpenClaw 橙框浏览器 + CDP</li>
         </ul>
@@ -234,6 +235,7 @@
     <div class="flow">openclawProject/
 ├── apps/
 │   ├── edge-worker/     # 巡检边端（核心业务逻辑）★优先读
+│   ├── desktop/         # 「智能客服」一体端（Electron；Edge/Full 双安装包）
 │   └── console/         # Next 配置台 :18790
 ├── packages/
 │   └── runtime-config/  # cs-runtime schema 校验
@@ -260,6 +262,11 @@
           <td><code class="path">cs-watch.js</code></td>
           <td>主循环：CDP、美团/抖音扫列表、开聊、气泡待回、claim、生成回复、发送、state/lock。</td>
           <td><code>main</code> → <code>tick</code> → <code>processMeituan</code> → <code>generateReply</code></td>
+        </tr>
+        <tr>
+          <td><code class="path">chat-trace.js</code></td>
+          <td>聊天排查日志：顾客原文、查单/知识库/OpenClaw、是否发出；落盘 jsonl。</td>
+          <td><code>beginTrace</code> / <code>commitChatTrace</code> / <code>readChatTraces</code></td>
         </tr>
         <tr>
           <td><code class="path">order-lookup.js</code></td>
@@ -349,11 +356,13 @@
         <tr><td><code class="path">infra/docker-compose.yml</code></td><td>本机联调 Postgres + Redis。</td></tr>
         <tr><td><code class="path">infra/init-db.sql</code></td><td>RAG / pgvector 表结构。</td></tr>
         <tr><td><code class="path">scripts/Start-All.ps1</code></td><td>一键：Infra → RAG → Console → OpenClaw → cs-watch。</td></tr>
+        <tr><td><code class="path">scripts/Start-Mid.ps1</code></td><td>仅中台：Docker + rag-service(+配置台)；打印局域网 IP 给边端填 <code>RAG_BASE_URL</code>。</td></tr>
+        <tr><td><code class="path">scripts/Stop-Mid.ps1</code></td><td>只停 rag/配置台；默认保留 Docker；不停巡检。</td></tr>
         <tr><td><code class="path">scripts/Start-CsWatch.ps1</code></td><td>确保浏览器/CDP 后启动巡检。</td></tr>
         <tr><td><code class="path">scripts/Stop-All.ps1</code></td><td>停相关进程，清 lock。</td></tr>
         <tr><td><code class="path">scripts/Ensure-Infra.ps1</code></td><td>Docker pull/up + 建表。</td></tr>
         <tr><td><code class="path">scripts/run-next-console.js</code></td><td>启动 Next console（dev/build/start）。</td></tr>
-        <tr><td><code class="path">scripts/kb-admin-server.js</code></td><td>静态 admin 回退（含 /project-map、/guide…）。</td></tr>
+        <tr><td><code class="path">scripts/kb-admin-server.js</code></td><td>静态 admin：cs-runtime、/api/env、/api/openclaw-llm、/api/chat-logs、上传转发。</td></tr>
       </tbody>
     </table>
 
@@ -369,6 +378,7 @@
         <tr><td><code class="path">knowledge/cards/</code></td><td>结构化知识卡（对外话术）。</td></tr>
         <tr><td><code class="path">knowledge/index/</code></td><td>本地降级索引（embeddings/wiki/meta）。</td></tr>
         <tr><td><code class="path">memory/cs-watch.log</code></td><td>巡检主日志。</td></tr>
+        <tr><td><code class="path">memory/chat-trace.jsonl</code></td><td>聊天排查日志：顾客原文、查单/知识库/OpenClaw、是否发出。</td></tr>
         <tr><td><code class="path">memory/cs-watch-state.json</code></td><td>已处理指纹、quiet、pending。</td></tr>
         <tr><td><code class="path">memory/cs-watch.lock</code></td><td>单实例锁。</td></tr>
         <tr><td><code class="path">AGENTS.md</code></td><td>Cursor Agent 规则与红线。</td></tr>

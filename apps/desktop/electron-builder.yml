@@ -13,6 +13,7 @@ files:
   - preload.js
   - ensure-electron.js
   - package.json
+  - product-profile.json
   - ui/**/*
 extraResources:
   - from: ../../dist-pack/desktop-stage/openclaw-cs
@@ -23,19 +24,20 @@ electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 win:
   signAndEditExecutable: false
+  icon: icon.ico
   target:
     - target: nsis
       arch:
         - x64
-  # Deliberately NOT "OpenClaw-CS-Setup-*" — that substring-matches OpenClaw-CS.exe
-  artifactName: OpenClawDesktop-Setup-${version}-${arch}.${ext}
+  # OC_PACK_MODE=Edge|Full set by Pack-Desktop.ps1 (avoid OpenClaw-CS-Setup* substring)
+  artifactName: OpenClawDesktop-Setup-${env.OC_PACK_MODE}-${version}-${arch}.${ext}
 nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: OpenClaw客服一体端
+  shortcutName: ${env.OC_SHORTCUT_NAME}
   language: 2052
   # relative to buildResources (apps/desktop/build)
   include: installer.nsh

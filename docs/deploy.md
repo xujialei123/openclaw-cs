@@ -130,12 +130,15 @@ RAG_API_KEY=<由中台签发的边端密钥>
 
 ## 6. 与当前本机启动的关系
 
-| 能力 | 本机联调 (`DEPLOY_ROLE=all`) | 最终交付边端 (`DEPLOY_ROLE=edge`) |
-|---|---|---|
-| `Ensure-Infra` | ✅ 本机 Docker 替身 | ❌ 跳过；库在中台机执行 |
-| 本地拉起 rag-service | ✅ | ❌；只健康检查远程 `RAG_BASE_URL` |
-| 配置 | `cs-runtime.json` + 相对路径 / `${ENV}` | `cs-runtime.prod.example.json` 为模板 |
-| 数据库 | 本机卷 | 中台持久卷 + 备份 |
+| 能力 | 本机联调 (`DEPLOY_ROLE=all`) | 本机当中台 (`npm run start:mid`) | 最终交付边端 (`DEPLOY_ROLE=edge`) |
+|---|---|---|---|
+| `Ensure-Infra` | ✅ 本机 Docker 替身 | ✅ | ❌ 跳过；库在中台机执行 |
+| 本地拉起 rag-service | ✅ | ✅（局域网可连 `:8787`） | ❌；只健康检查远程 `RAG_BASE_URL` |
+| OpenClaw / cs-watch | ✅ | ❌ 不起 | ✅ 只在坐席机 |
+| 配置 | `cs-runtime.json` + 相对路径 / `${ENV}` | 本机 `brain/.env`；边端指局域网 IP | `cs-runtime.prod.example.json` 为模板 |
+| 数据库 | 本机卷 | 本机卷（试点） | 中台持久卷 + 备份 |
+
+本机中台联调：先 `npm run start:mid`，再在其他电脑装 **边端安装包**（`npm run desktop:dist:edge`），首次引导填 `RAG_BASE_URL=http://<局域网IP>:8787`。全栈安装包（`desktop:dist:full`）仅用于单机试点，角色在打包时固化，装机后不再切换。
 
 ## 7. 安全与合规底线
 

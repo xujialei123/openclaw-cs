@@ -3,38 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenClaw 客服一体端</title>
+    <title>智能客服</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="icon.png" type="image/png" />
   </head>
   <body>
     <div class="app" id="appShell">
       <header class="topbar">
         <div class="brand">
-          <span class="mark" aria-hidden="true">OC</span>
+          <img class="mark-img" src="icon.png" width="32" height="32" alt="" />
           <div class="brand-text">
             <div class="brand-row">
-              <strong>OpenClaw</strong>
-              <span class="badge">客服一体端</span>
+              <strong>智能客服</strong>
+              <span class="badge" id="editionBadge">商家助手</span>
             </div>
-            <small id="roleHint">本机服务控制台</small>
+            <small id="roleHint">准备就绪后即可开始接待</small>
           </div>
         </div>
 
         <div class="topbar-center">
           <span id="stackHint" class="stack-hint">检测中…</span>
-          <p class="msg" id="msg">正在检测服务…</p>
+          <p class="msg" id="msg">正在检查状态…</p>
         </div>
 
         <div class="actions">
           <div class="btn-group primary-group">
-            <button type="button" id="btnStart" class="btn btn-primary">启动全部</button>
-            <button type="button" id="btnStop" class="btn btn-danger">停止全部</button>
+            <button type="button" id="btnStart" class="btn btn-primary">开始接待</button>
+            <button type="button" id="btnStop" class="btn btn-danger">停止接待</button>
           </div>
           <div class="btn-group">
-            <button type="button" id="btnAdmin" class="btn">刷新配置页</button>
-            <button type="button" id="btnRefresh" class="btn">刷新状态</button>
-            <button type="button" id="btnPortable" class="btn">OpenClaw 目录</button>
-            <button type="button" id="btnLogs" class="btn">日志目录</button>
+            <button type="button" id="btnAdmin" class="btn">刷新设置</button>
+            <button type="button" id="btnToggleAdvanced" class="btn" aria-expanded="false">高级</button>
           </div>
         </div>
       </header>
@@ -42,59 +41,69 @@
       <section class="toolbar">
         <label class="check">
           <input type="checkbox" id="chkAuto" />
-          <span>打开应用时自动启动全部服务</span>
+          <span>打开软件时自动开始接待</span>
         </label>
-        <span class="toolbar-note">关闭窗口将停止全部服务；最小化可继续运行</span>
+        <span class="toolbar-note">关闭窗口会停止接待；最小化可继续运行</span>
       </section>
 
-      <section class="status" id="statusRow" aria-label="服务状态">
-        <div class="pill" data-k="portableOk"><span class="dot"></span><span class="pill-label">OpenClaw 包</span></div>
-        <div class="pill" data-k="dockerOk" title="Docker Desktop 需单独安装"><span class="dot"></span><span class="pill-label">Docker</span></div>
-        <div class="pill" data-k="rag"><span class="dot"></span><span class="pill-label">知识库</span></div>
-        <div class="pill" data-k="admin"><span class="dot"></span><span class="pill-label">管理台</span></div>
-        <div class="pill" data-k="gateway"><span class="dot"></span><span class="pill-label">Gateway</span></div>
-        <div class="pill" data-k="cdp"><span class="dot"></span><span class="pill-label">浏览器 CDP</span></div>
-        <div class="pill" data-k="watch"><span class="dot"></span><span class="pill-label">巡检</span></div>
-        <div class="pill" data-k="wecom"><span class="dot"></span><span class="pill-label">企微桥</span></div>
+      <section class="toolbar advanced-bar" id="advancedBar" hidden>
+        <button type="button" id="btnRefresh" class="btn btn-mini">刷新状态</button>
+        <button type="button" id="btnPortable" class="btn btn-mini">运行时目录</button>
+        <button type="button" id="btnLogs" class="btn btn-mini">日志目录</button>
+        <span class="toolbar-note">运维选项，日常可忽略</span>
       </section>
 
-      <div class="workspace">
+      <section class="status" id="statusRow" aria-label="运行状态">
+        <div class="status-lead">服务状态</div>
+        <div class="pill" data-k="portableOk"><span class="dot"></span><span class="pill-label">工作台</span></div>
+        <div class="pill" data-k="rag"><span class="dot"></span><span class="pill-label">话术库</span></div>
+        <div class="pill" data-k="admin"><span class="dot"></span><span class="pill-label">设置页</span></div>
+        <div class="pill" data-k="gateway"><span class="dot"></span><span class="pill-label">浏览器引擎</span></div>
+        <div class="pill" data-k="cdp"><span class="dot"></span><span class="pill-label">托管浏览器</span></div>
+        <div class="pill" data-k="watch"><span class="dot"></span><span class="pill-label">自动回复</span></div>
+        <div class="pill" data-k="wecom"><span class="dot"></span><span class="pill-label">企微接待</span></div>
+        <div class="pill advanced-only" data-k="dockerOk" title="仅本机独立使用时需要"><span class="dot"></span><span class="pill-label">本地数据库</span></div>
+      </section>
+
+      <div class="workspace log-collapsed" id="workspace">
         <aside class="log-panel" id="logPanel">
           <div class="panel-head">
             <div>
-              <strong>运行日志</strong>
-              <span class="panel-sub">启动 / 停止实时输出</span>
+              <strong>运行记录</strong>
+              <span class="panel-sub">启动过程提示（日常可收起）</span>
             </div>
-            <button type="button" id="btnClearLog" class="btn btn-mini">清空</button>
+            <div class="panel-head-actions">
+              <button type="button" id="btnClearLog" class="btn btn-mini">清空</button>
+              <button type="button" id="btnToggleLog" class="btn btn-mini">收起</button>
+            </div>
           </div>
           <pre id="logView" class="log-view" aria-live="polite"></pre>
           <p class="log-note">
-            Docker Desktop 需单独安装。已安装则启动时自动拉起引擎并建表。配置中心仅在右侧操作，不弹系统浏览器。
+            日常：点「开始接待」→ 橙色边框浏览器登录美团 / 抖音 → 右侧设置回复范围与话术。
           </p>
         </aside>
 
         <main class="frame-wrap">
           <div class="panel-head frame-head">
             <div>
-              <strong>配置中心</strong>
-              <span class="panel-sub">管理台 · 白名单 · 知识库 · 环境变量</span>
+              <strong>店铺设置</strong>
+              <span class="panel-sub">谁可自动回复 · 话术上传 · 升级通知</span>
             </div>
+            <button type="button" id="btnShowLog" class="btn btn-mini log-open-btn" title="查看启动记录">运行记录</button>
           </div>
           <div class="frame-body">
-            <iframe id="adminFrame" title="配置中心" src="about:blank"></iframe>
+            <iframe id="adminFrame" title="店铺设置" src="about:blank"></iframe>
             <div class="empty" id="empty">
               <div class="empty-card">
-                <div class="empty-icon" aria-hidden="true"></div>
-                <h1>服务尚未就绪</h1>
-                <p>
-                  点击左上角「启动全部」，将拉起知识库、管理台、Gateway、托管浏览器、美团/抖音巡检与企微桥。左侧可查看实时日志。
-                </p>
+                <img class="empty-logo" src="icon.png" width="56" height="56" alt="" />
+                <h1>还没有开始接待</h1>
+                <p>点击左上角「开始接待」。就绪后，右侧可设置店铺与话术；请在橙色边框浏览器中登录美团经营宝 / 抖音来客。</p>
                 <ol class="empty-steps">
-                  <li>启动全部服务</li>
-                  <li>在配置中心完成店铺与密钥配置</li>
-                  <li>在橙框浏览器扫码登录各平台</li>
+                  <li>开始接待</li>
+                  <li>登录美团 / 抖音（扫码一次即可）</li>
+                  <li>在右侧设置谁可自动回复、上传话术</li>
                 </ol>
-                <p class="hint" id="emptyHint">内置 OpenClaw 便携包；登录态需在托管浏览器中完成。</p>
+                <p class="hint" id="emptyHint">连接公司服务器时，无需在本机安装数据库。</p>
               </div>
             </div>
           </div>
@@ -102,67 +111,47 @@
       </div>
     </div>
 
-    <!-- 首次 / 未配置：全屏引导（产品级 onboarding） -->
     <div class="onboard" id="onboard" hidden>
       <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="obTitle">
         <div class="onboard-brand">
-          <span class="mark" aria-hidden="true">OC</span>
+          <img class="mark-img" src="icon.png" width="40" height="40" alt="" />
           <div>
-            <strong id="obTitle">欢迎使用 OpenClaw 客服一体端</strong>
-            <p class="onboard-sub">开始前请完成基础配置。保存后即可启动服务。</p>
+            <strong id="obTitle">欢迎使用智能客服</strong>
+            <p class="onboard-sub" id="obSub">本安装包角色已固定，完成下面几步即可开始接待。</p>
           </div>
         </div>
 
         <div class="onboard-steps" id="obSteps" aria-label="配置步骤">
-          <span data-i="0">1 角色</span>
-          <span data-i="1">2 运行时</span>
-          <span data-i="2">3 中台</span>
-          <span data-i="3">4 确认</span>
+          <span data-i="0">1 工作台</span>
+          <span data-i="1">2 话术服务</span>
+          <span data-i="2">3 确认</span>
         </div>
 
         <div class="onboard-pane on" data-step="0">
-          <p class="hint">这台电脑怎么用？</p>
-          <label class="role-card">
-            <input type="radio" name="obRole" value="all" checked />
-            <span>
-              <strong>本机全栈（联调 / 单机试点）</strong>
-              <small>本机可起 Docker + 知识库；适合你自己这台当中台。</small>
-            </span>
-          </label>
-          <label class="role-card">
-            <input type="radio" name="obRole" value="edge" />
-            <span>
-              <strong>仅边端（连同事 / 服务器中台）</strong>
-              <small>不跑本机库；填写对方中台地址即可自动回复。</small>
-            </span>
-          </label>
-        </div>
-
-        <div class="onboard-pane" data-step="1">
-          <p class="hint">OpenClaw 便携包提供 Gateway 与托管浏览器。安装版若已内置可直接下一步。</p>
-          <label for="obPortable">便携包路径</label>
+          <p class="hint">工作台用于打开美团 / 抖音接待页。安装版通常已内置，可直接下一步。</p>
+          <label for="obPortable">工作台目录（一般无需修改）</label>
           <div class="path-row">
-            <input type="text" id="obPortable" placeholder="例如 F:\OpenClaw-USB-Portable" spellcheck="false" />
+            <input type="text" id="obPortable" placeholder="安装版可留空或使用默认路径" spellcheck="false" />
             <button type="button" class="btn" id="obBrowse">浏览…</button>
           </div>
           <p class="hint" id="obPortableHint"></p>
         </div>
 
-        <div class="onboard-pane" data-step="2">
-          <p class="hint">边端通过 HTTP 访问知识中台。本机全栈一般填本机 8787；连别人的中台填局域网 IP。</p>
-          <label for="obRagUrl">中台地址 RAG_BASE_URL</label>
-          <input type="text" id="obRagUrl" placeholder="http://127.0.0.1:8787" spellcheck="false" />
-          <label for="obRagKey">API Key（可选，留空不改已有密钥）</label>
-          <input type="password" id="obRagKey" placeholder="与中台 brain/.env 中 RAG_API_KEY 一致" autocomplete="off" />
+        <div class="onboard-pane" data-step="1">
+          <p class="hint" id="obRagHint">填写话术服务地址。</p>
+          <label for="obRagUrl">话术服务地址</label>
+          <input type="text" id="obRagUrl" placeholder="例如 http://192.168.1.23:8787" spellcheck="false" />
+          <label for="obRagKey">访问密钥（可选，已配置可留空）</label>
+          <input type="password" id="obRagKey" placeholder="由管理员提供" autocomplete="off" />
         </div>
 
-        <div class="onboard-pane" data-step="3">
-          <p class="hint">确认后写入本机 .env 与运行配置。白名单、知识库可在启动后于右侧配置中心继续设置。</p>
+        <div class="onboard-pane" data-step="2">
+          <p class="hint">确认后保存。之后可在右侧继续设置回复范围与话术。</p>
           <dl class="onboard-summary" id="obSummary"></dl>
           <ul class="hint onboard-next">
-            <li>保存后点击「启动全部」</li>
-            <li>在橙框浏览器登录美团 / 抖音</li>
-            <li>需要细调时打开右侧配置中心</li>
+            <li>保存后点击「开始接待」</li>
+            <li>在橙色边框浏览器登录美团 / 抖音</li>
+            <li>在右侧设置谁可自动回复</li>
           </ul>
         </div>
 

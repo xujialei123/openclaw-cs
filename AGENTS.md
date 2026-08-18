@@ -34,7 +34,8 @@
 4. 若存在则读：`SOUL.md`、`USER.md`、`TOOLS.md`、当日 memory
 5. 主会话才加载 `MEMORY.md`
 
-启动后人类入口：`Start-All` 会打开 http://127.0.0.1:18790/guide ；研发梳理页：`/dev-flow`；**项目全景（目录/文件职责）**：`/project-map`。
+启动后人类入口：`Start-All` 会打开 http://127.0.0.1:18790/guide ；研发梳理页：`/dev-flow`；**项目全景（目录/文件职责）**：`/project-map`。  
+本机只当中台给别的电脑连：`npm run start:mid`（Docker + rag-service，打印局域网 IP）。
 
 ---
 
@@ -82,6 +83,7 @@
 - 边端环境：本仓 `.env`（路径/端口/`RAG_BASE_URL`）
 - 中台环境：本仓 `brain/.env`（`DATABASE_URL`、`EMBEDDING_*`、千问 key）
 - 一键：`Start-All.bat`（优先 Next console，失败回退 `kb-admin-server`）
+- 仅中台：`npm run start:mid` / `scripts/Start-Mid.bat`（供边端局域网连接）
 - Monorepo：`apps/*` + `packages/*`（`npm install` 后 `npm run edge` / `npm run console`）
 
 **禁止**把长期话术写死在巡检脚本里；企业话术进中台知识库。
@@ -95,7 +97,7 @@
 
 - OpenClaw 橙框浏览器登录；平台隔离；白名单灰度。
 - 知识库未命中：`onMiss=chat` 允许**闲聊**；问政策/地址/价格等事实且库未命中 → **禁止 LLM 编造**，走澄清或安全话术。有库命中才许复述库内事实。
-- 日志：`memory/cs-watch.log`（关注 `KB_HIT via=remote` / `KB_REMOTE_FAIL` / `KB_MISS`）
+- 日志：`memory/cs-watch.log`（过程：`KB_HIT via=remote` / `KB_REMOTE_FAIL` / `KB_MISS`）；对话排查：`memory/chat-trace.jsonl` 或配置台「聊天日志」
 
 ---
 

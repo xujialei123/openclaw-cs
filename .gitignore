@@ -27,6 +27,7 @@ memory/*.log
 memory/*.lock
 memory/cs-watch-state.json
 memory/*.json
+memory/*.jsonl
 !memory/.gitkeep
 
 # 知识库本地缓存与上传（体积大且含业务内容）
