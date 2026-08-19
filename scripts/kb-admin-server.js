@@ -43,7 +43,6 @@ const EDGE_ENV_KEYS = [
 ];
 const BRAIN_ENV_KEYS = [
   "DATABASE_URL",
-  "REDIS_URL",
   "RAG_SERVICE_PORT",
   "RAG_API_KEY",
   "VECTOR_STORE",

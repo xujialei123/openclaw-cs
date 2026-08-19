@@ -13,7 +13,7 @@
 | **OpenClaw USB 便携包** | 自带 Node、Gateway、托管浏览器（CDP） | `F:\OpenClaw-USB-Portable` |
 | **本仓 openclawProject** | 边端 + **infra/** + **brain/**（中台） | `F:\openclawProject` |
 | **brain/.env** | DB / 千问 Embedding / RAG_API_KEY | 本仓 `brain\` |
-| **infra/** | Docker Compose Postgres+Redis、建表 SQL | 本仓 `infra\` |
+| **Postgres** | **Supabase**（免 Docker） | `brain/.env` 的 `DATABASE_URL` |
 | **OpenClaw USB 便携包** | Node、Gateway、托管浏览器 | `OPENCLAW_PORTABLE_ROOT` |
 
 > 日常跑客服边端时，**不必单独装系统 Node**：用便携包内 `node-win-x64\node.exe` 即可。
@@ -22,9 +22,11 @@
 
 | 组件 | 说明 |
 |---|---|
-| **Docker Desktop** | 跑本仓 `infra/docker-compose`（Postgres/pgvector + Redis） |
+| **Postgres + pgvector** | 云库 **Supabase**（`DATABASE_URL` + `npm run db:init`） |
 | **brain/rag-service** | 本仓中台进程（`:8787`）；见 `brain/README.md` |
-| **brain/.env** | `DATABASE_URL`、`EMBEDDING_API_KEY`（千问）等 |
+| **brain/.env** | `DATABASE_URL`（Supabase）、`EMBEDDING_API_KEY`（千问）等 |
+
+**不需要 Docker / Redis。** 中台可整机部署到服务器，见 [deploy.md §4](./deploy.md)。
 
 ### 不需要装的
 
@@ -96,8 +98,7 @@ F:\openclawProject\brain\.env.example → brain\.env
 
 | 变量 | 含义 |
 |---|---|
-| `DATABASE_URL` | Postgres，宿主端口 **5433**（本仓 `infra/` 容器） |
-| `REDIS_URL` | Redis |
+| `DATABASE_URL` | Postgres：**Supabase Session URI**（密码中 `@` 写成 `%40`） |
 | `RAG_SERVICE_PORT` | 默认 `8787` |
 | `RAG_API_KEY` | 与边端一致 |
 | `EMBEDDING_*` | 千问 DashScope |
@@ -110,13 +111,13 @@ F:\openclawProject\brain\.env.example → brain\.env
 
 ## 一键启动
 
-1. 安装并尽量保持 **Docker Desktop** 可用（首次会自动拉镜像、起容器、建表）。
+1. 配置 `brain/.env` 的 Supabase `DATABASE_URL`，首次执行 `npm run db:init`。  
 2. 双击项目根目录 `Start-All.bat`，或：
 
 ```powershell
 npm start                 # 推荐：infra + rag + 控制台 + Gateway/浏览器 + cs-watch
 npm run desktop           # 桌面端「智能客服」：启停接待 + 内嵌店铺设置
-npm run start:watch       # 只起 Gateway/浏览器 + 巡检（不开 Docker/rag）
+npm run start:watch       # 只起 Gateway/浏览器 + 巡检（不开 rag）
 npm run edge              # 仅巡检进程（需 18800 已就绪）
 npm run edge:dev          # 开发：改 apps/edge-worker 代码自动重启进程
 npm run stop
@@ -143,7 +144,7 @@ npm run desktop:dist:full     # 仅全栈 OpenClawDesktop-Setup-Full-*.exe
 | 安装包 | 固化 | 首次引导 |
 |---|---|---|
 | Edge | `DEPLOY_ROLE=edge` | 填公司话术服务地址 |
-| Full | `DEPLOY_ROLE=all` | 默认本机 `8787`，需 Docker |
+| Full | `DEPLOY_ROLE=all` | 默认本机 `8787`；库走 Supabase |
 
 装机后点「开始接待」，再在托管浏览器扫码登录即可。若打包时加 `-SkipPortable`，则需手动选工作台目录。
 
@@ -154,11 +155,11 @@ npm run desktop:dist:full     # 仅全栈 OpenClawDesktop-Setup-Full-*.exe
 
 启动顺序：
 
-0. **Ensure-Infra**：检测/拉起 Docker → `docker pull`（缺镜像时）→ `compose up`（Postgres:5433 + Redis:6379）→ 执行 `init-db.sql` 建 RAG 表 → 有 Prisma 则 `migrate deploy`
-1. 拉起本仓 `brain/rag-service`（8787）
-2. 边端配置台（18790：已 build 的 Next `apps/console`，否则 legacy `kb-admin`）并打开教程
-3. **OpenClaw Gateway**（18789，最小化窗口）→ 托管浏览器（CDP 18800）
-4. cs-watch 巡检（`apps/edge-worker`）
+0. **Ensure-Infra**：`npm run db:init` 对 `DATABASE_URL`（Supabase）建 RAG 表  
+1. 拉起本仓 `brain/rag-service`（8787）  
+2. 边端配置台（18790）  
+3. **OpenClaw Gateway**（18789）→ 托管浏览器（CDP 18800）  
+4. cs-watch 巡检  
 
 仓库为 npm workspaces：`apps/*` + `packages/*`。首次：
 
@@ -172,13 +173,7 @@ npm run edge:once       # 冒烟一轮巡检
 
 若出现 `GatewayTransportError: gateway closed (1006)`：说明 Gateway 未起就调了 `browser start`。重新跑 `Start-All`（已会自动起 Gateway），或先手动运行便携包 `Start-OpenClaw.bat`。
 
-跳过 Docker（仅联调本地 knowledge / 或已是远程中台边端）：
-
-```powershell
-.\scripts\Start-All.ps1 -SkipDocker
-```
-
-边端交付形态（不拉本机库，只连中台）——在 `.env` 设：
+边端交付形态（本机不跑库，只连中台）——在 `.env` 设：
 
 ```env
 DEPLOY_ROLE=edge
@@ -190,7 +185,7 @@ RAG_API_KEY=...
 
 ### 本机当中台（其他电脑连你）
 
-只起 Docker + rag-service（+ 本机配置台），**不起** OpenClaw / 巡检：
+只起 rag-service（+ 本机配置台），**不起** OpenClaw / 巡检：
 
 ```powershell
 npm run start:mid
@@ -206,7 +201,7 @@ RAG_API_KEY=（与本机 brain\.env 一致）
 ```
 
 其他电脑装一体端 → 引导选「仅边端」→ 填上面三项 → 启动。  
-请放行防火墙 **TCP 8787**；本机勿休眠。停止中台：`npm run stop:mid`（默认保留 Docker）。
+请放行防火墙 **TCP 8787**；本机勿休眠。停止中台：`npm run stop:mid`。
 
 仅基础设施：
 
@@ -224,11 +219,10 @@ RAG_API_KEY=（与本机 brain\.env 一致）
 .\scripts\Stop-All.ps1
 ```
 
-默认停：`cs-watch`、边端控制台（Next 或 legacy admin）、本机 `rag-service`。  
-默认不停：Docker 数据库、OpenClaw 浏览器（避免每次重登）。
+默认停：`cs-watch`、边端控制台、本机 `rag-service`。  
+默认不停：OpenClaw 浏览器（避免每次重登）。
 
 ```powershell
-.\scripts\Stop-All.ps1 -StopDocker      # 额外停 Postgres/Redis 容器
 .\scripts\Stop-All.ps1 -StopBrowser     # 尝试关 OpenClaw 浏览器
 .\scripts\Stop-All.ps1 -KeepRag         # 保留 8787
 npm run stop:mid                        # 只停中台 rag/配置台（不停巡检）
@@ -450,10 +444,10 @@ npm run stop:mid                        # 只停中台 rag/配置台（不停巡
 
 | | 本机联调（现在） | 最终交付 |
 |---|---|---|
-| 数据库 | 本机 Docker `5433`（**替身**） | **中台独立 Postgres/pgvector** + 备份 |
-| rag-service | 本机 8787（替身） | 中台 HTTPS |
+| 数据库 | **Supabase** | 同一套 Supabase（或独立项目）+ 备份 |
+| rag-service | 本机 8787 | **服务器** `start:mid` + HTTPS |
 | 边端 | 与中台同机可 | 多坐席机，只配 `RAG_BASE_URL` |
-| 启动 | `Start-All` 含 Ensure-Infra | 中台机跑库+RAG；边端 `-SkipDocker` |
+| 启动 | `Start-All` / `start:mid` | 中台机跑 rag；边端 `DEPLOY_ROLE=edge` |
 
 **不要等最后再部署**：功能用替身跑，配置形状从一开始就要能换成远程中台（见 [deploy.md](./deploy.md) §0）。  
 完整说明：[生产交付文档](./deploy.md)。

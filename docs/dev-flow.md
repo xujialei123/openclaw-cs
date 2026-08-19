@@ -8,7 +8,7 @@
 ```text
 ┌─────────────────────────────────────────────────────────┐
 │ 运营 / 研发入口                                           │
-│  Start-All → Ensure-Infra(本机联调) → 18790 · 8787         │
+│  Start-All → db:init(Supabase) → 18790 · 8787         │
 │  最终交付：中台机独立部署库+RAG；边端只连远程（见 deploy.md） │
 └───────────────┬─────────────────────────┬───────────────┘
                 │                         │
@@ -17,7 +17,7 @@
 │ 边端 Edge（本仓）           │   │ 大脑 Brain（骨架/中台机）   │
 │ · cs-watch 巡检            │   │ · rag-service             │
 │ · admin 薄网关             │──▶│ · Postgres/pgvector（生产库）│
-│ · OpenClaw 浏览器 CDP      │   │ · Redis · 备份 · HTTPS    │
+│ · OpenClaw 浏览器 CDP      │   │ · 备份 · HTTPS            │
 └───────────────┬───────────┘   └───────────────────────────┘
                 │
                 ▼
@@ -86,7 +86,7 @@ Tick
 | 配置校验 | `packages/runtime-config` |
 | 边端控制台 | `apps/console`（Next `:18790`）；知识库上传暂用 `npm run admin:legacy` |
 | 一键启动 | `Start-All.bat` / `scripts/Start-All.ps1` |
-| Docker/建表 | `scripts/Ensure-Infra.ps1`（pull + compose + init-db / prisma） |
+| 建表 | `scripts/Ensure-Infra.ps1` / `npm run db:init`（Supabase，无 Docker） |
 | 任务板 | `tasks.md` |
 | 使用教程 | `docs/guide.md` |
 | 本流程页 | `docs/dev-flow.md` |

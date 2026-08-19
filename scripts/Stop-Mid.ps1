@@ -1,12 +1,9 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Stop mid-platform only: rag-service + kb-admin. Docker kept by default.
+  Stop mid-platform only: rag-service + kb-admin.
   Does not stop cs-watch / OpenClaw.
 #>
-param(
-  [switch]$StopDocker
-)
 
 $ErrorActionPreference = "Continue"
 $Root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -48,24 +45,6 @@ Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
       Write-Host ("  stop next pid={0}" -f $_.ProcessId)
     } catch {}
   }
-
-if ($StopDocker) {
-  Write-Host "[3] Docker containers"
-  $docker = Get-Command docker -ErrorAction SilentlyContinue
-  if ($docker) {
-    foreach ($name in @("customer-ai-postgres", "customer-ai-redis")) {
-      $old = $ErrorActionPreference
-      $ErrorActionPreference = "SilentlyContinue"
-      & docker stop $name 2>&1 | Out-Null
-      $ErrorActionPreference = $old
-      Write-Host "  docker stop $name"
-    }
-  } else {
-    Write-Warning "  docker not found; skip"
-  }
-} else {
-  Write-Host "[3] Docker: kept (use -StopDocker to stop postgres/redis)"
-}
 
 Write-Host ""
 Write-Host "Done. Edge (cs-watch / OpenClaw) was not stopped."

@@ -14,19 +14,19 @@
 > **当前优先级：客服线走通（§P）**，但**一律按最终交付形态演进**（中台可远程、边端可零库），禁止最后再硬切。  
 > 扩展口子（§7）与交付约束（§9 形态项）与 §P **并行**；代运营写操作（§8）仍延后。  
 > **禁用**客服 AI 便携包 / RPA 插件。只走 OpenClaw Gateway + 托管浏览器。  
-> **交付原则**：中台（库+RAG）集中部署；边端多机只连远程中台。本机 Docker = 联调替身，接口形状必须与生产一致。详见 `docs/deploy.md`。
+> **交付原则**：中台（Supabase + rag-service）集中部署；边端多机只连远程中台。详见 `docs/deploy.md`。
 
 ---
 
 ## 演进原则（强制，避免最后硬切翻车）
 
 > **最后才「一起处理部署」必然出问题**：本机写死 `127.0.0.1`、边端依赖本机库、密钥进仓库、无备份……上线时才改，成本最高。  
-> **正确做法**：功能可以本机跑，**形态从第一天就按交付来**——配置可指向远程中台、库只经中台、边端可 `-SkipDocker`。
+> **正确做法**：功能可以本机跑，**形态从第一天就按交付来**——配置可指向远程中台、库只经中台 HTTP、边端 `DEPLOY_ROLE=edge`。
 
 | 可以本机简化 | 从一开始就不能省 |
 |---|---|
-| 本机 Docker 当中台替身 | `RAG_BASE_URL` / apiKey / shopId 可换环境 |
-| 单店白名单联调 | 禁止业务写死本机 `5433` 为唯一库 |
+| 本机 rag-service + Supabase | `RAG_BASE_URL` / apiKey / shopId 可换环境 |
+| 单店白名单联调 | 禁止业务写死本机库为唯一库 |
 | 本机 Embedding 联调 | 密钥进 `.env`，不进 Git |
 | 本机 Ensure-Infra 建表 | 建表脚本与生产同一套（init-db / migrate） |
 
@@ -46,10 +46,10 @@
 | TP.4 | `[ ]` | 常用 FAQ 进中台并 `via=remote` 命中 | 营业/套餐/上门/周末等不以脚本兜底为主 |
 | TP.5 | `[ ]` | T3 问法双平台回归 | 同问法口径一致；退款走升级 |
 | TP.6 | `[ ]` | 去掉/收窄 `generateReply` 硬编码兜底 | 仅保留问候级；政策类进知识库 |
-| TP.7 | `[~]` | 一键启动稳定（Docker/建表 + 8787 + admin + OpenClaw + cs-watch） | `Start-All.bat`；`Ensure-Infra.ps1` |
+| TP.7 | `[~]` | 一键启动稳定（建表 + 8787 + admin + OpenClaw + cs-watch） | `Start-All.bat`；`npm run db:init` |
 | TP.8 | `[ ]` | 客服线「单店交付」清单 | 配置/登录/白名单/kbIds/日志路径文档化 |
 | TP.9 | `[x]` | 启动带使用教程 + 研发流程页 | `/guide` `/dev-flow`；新功能必须同步文档（AGENTS） |
-| TP.10 | `[~]` | **形态自检**：边端可只连远程中台（本机可不跑库） | `DEPLOY_ROLE=edge` + `RAG_BASE_URL`；`-SkipDocker` |
+| TP.10 | `[~]` | **形态自检**：边端可只连远程中台（本机可不跑库） | `DEPLOY_ROLE=edge` + `RAG_BASE_URL` |
 | TP.11 | `[x]` | 配置样例拆分：`cs-runtime.json`（联调）/ `cs-runtime.prod.example.json` | prod：`fallbackLocal=false`、远程 baseUrl |
 | TP.12 | `[x]` | 转人工推企微内部群 Webhook | `notify.escalate`；日志 `ESCALATE_NOTIFY ok` |
 | TP.13 | `[x]` | 一体端未配置时强制启动引导（产品级 UI） | 缺便携包/`RAG_BASE_URL` 全屏引导；保存写 `.env`；拦启动/自动启动 |
@@ -60,6 +60,7 @@
 | TP.18 | `[x]` | LLM 服务商官方预设 | DeepSeek/通义国内国际/Kimi国内国际/OpenAI/Agnes；模型 ID datalist 提示 |
 | TP.19 | `[x]` | 一体端产品观感收紧 | 运行记录默认收起；配置页藏骨架/端口文案；状态条弱化为指示灯 |
 | TP.20 | `[x]` | 聊天排查日志（顾客↔知识库/OpenClaw） | 配置台「聊天日志」；`memory/chat-trace.jsonl`；含查单命中、KB via、是否发出 |
+| TP.21 | `[x]` | 去掉 Docker/Redis；库走 Supabase | 无 compose；`db:init`；中台可部署到任意 Node 服务器 |
 
 ---
 
@@ -252,7 +253,7 @@
 ## 9. 最终交付形态 — 中台独立部署 + 生产库（从一开始按此演进）
 
 > 文档：`docs/deploy.md`。  
-> **不是「客服全做完再部署」**，而是：联调可用本机 Docker 替身，但接口/配置/建表路径与生产同构；§P 进行中同步消化下方 **形态项**，完整上线机（HTTPS/备份演练）可稍后。  
+> **不是「客服全做完再部署」**，而是：联调本机 rag + Supabase，接口/配置/建表路径与生产同构；§P 进行中同步消化下方 **形态项**，完整上线机（HTTPS/备份演练）可稍后。  
 > 禁止：功能全部堆完再一次性改远程中台。
 
 ### 9.0 与 §P 并行的形态项（优先于「大上线」）
@@ -260,7 +261,7 @@
 | ID | 状态 | 任务 | 验收 |
 |---|---|---|---|
 | T9.0a | `[x]` | 代码/脚本不假设库在边端本机 | 检索只经 `RAG_BASE_URL`；路径 `${ENV}` / 相对根 |
-| T9.0b | `[x]` | Ensure-Infra 标明「中台机执行」；边端 `DEPLOY_ROLE=edge` 默认可 SkipDocker | Start-All + `.env.example` |
+| T9.0b | `[x]` | Ensure-Infra 只对 `DATABASE_URL` 建表；边端 `DEPLOY_ROLE=edge` 不跑 rag | Start-All + `.env.example` |
 | T9.0c | `[~]` | 同一套 init-db / migrate 用于本机替身与中台 | Ensure-Infra 已用骨架脚本；staging 实机待验 |
 
 ### 9.1 架构与配置
@@ -271,13 +272,13 @@
 | T9.1 | `[x]` | 交付架构文档（中台集中 / 边端分布 / 库在中台） | `docs/deploy.md` |
 | T9.2 | `[ ]` | 环境分层：dev / staging / production 配置样例 | 边端只改 `RAG_BASE_URL` + apiKey 可切换 |
 | T9.3 | `[ ]` | 生产 `fallbackLocal=false` 约定与校验 | 中台不可达时明确失败，不静默用过期本地库 |
-| T9.4 | `[ ]` | 边端安装包与中台安装包拆分说明 | Start 脚本参数：边端 `-SkipDocker`；中台只跑 Ensure-Infra + rag |
+| T9.4 | `[~]` | 边端安装包与中台安装包拆分说明 | 边端连 `RAG_BASE_URL`；中台 `start:mid` + Supabase |
 
 ### 9.2 数据库与备份
 
 | ID | 状态 | 任务 | 验收 |
 |---|---|---|---|
-| T9.5 | `[ ]` | 生产库独立实例（非坐席本机 Docker 卷） | 连接串仅中台 `.env`；边端无 DATABASE_URL |
+| T9.5 | `[x]` | 生产库独立实例（非坐席本机 Docker 卷） | **Supabase**：`brain/.env` `DATABASE_URL`；`npm run db:init`；边端无库 |
 | T9.6 | `[ ]` | 中台首次部署：init-db.sql + prisma migrate | 空机可重复执行；RAG/业务表就绪 |
 | T9.7 | `[ ]` | 备份策略：日备 + 保留 + 恢复演练文档 | `docs/deploy.md` 有步骤；至少演练 1 次 |
 | T9.8 | `[ ]` | 库账号权限分离（应用账号 / 备份账号） | 应用无 DROP 等高危权限（按企业规范） |

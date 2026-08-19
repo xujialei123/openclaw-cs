@@ -182,7 +182,7 @@
     <!-- ========== 启动 ========== -->
     <h2 id="boot">2. 启动流程（谁先谁后）</h2>
     <ol>
-      <li><code>scripts/Ensure-Infra.ps1</code> — Docker 起 Postgres/Redis，执行 <code>infra/init-db.sql</code></li>
+      <li><code>scripts/Ensure-Infra.ps1</code> — 对 <code>DATABASE_URL</code>（Supabase）执行 <code>init-db.sql</code>，无 Docker</li>
       <li>启动 <code>brain/rag-service</code>（健康检查 <code>/health</code>）</li>
       <li>启动配置台：优先 Next <code>apps/console</code>，失败回退 <code>scripts/kb-admin-server.js</code>（同端口 :18790）</li>
       <li>启动 OpenClaw gateway + 受控浏览器（CDP 常见 <code>18800</code>）</li>
@@ -241,7 +241,7 @@
 │   └── runtime-config/  # cs-runtime schema 校验
 ├── brain/
 │   └── rag-service/     # 知识中台服务 :8787
-├── infra/               # docker-compose + init-db.sql
+├── infra/               # init-db.sql（RAG 表结构；执行用 npm run db:init）
 ├── config/              # cs-runtime.json（运行时）
 ├── knowledge/           # 话术源 / 本地降级索引
 ├── admin/               # 静态文档页（本页在此）
@@ -353,14 +353,14 @@
     <table class="files">
       <thead><tr><th>文件</th><th>职责</th></tr></thead>
       <tbody>
-        <tr><td><code class="path">infra/docker-compose.yml</code></td><td>本机联调 Postgres + Redis。</td></tr>
-        <tr><td><code class="path">infra/init-db.sql</code></td><td>RAG / pgvector 表结构。</td></tr>
-        <tr><td><code class="path">scripts/Start-All.ps1</code></td><td>一键：Infra → RAG → Console → OpenClaw → cs-watch。</td></tr>
-        <tr><td><code class="path">scripts/Start-Mid.ps1</code></td><td>仅中台：Docker + rag-service(+配置台)；打印局域网 IP 给边端填 <code>RAG_BASE_URL</code>。</td></tr>
-        <tr><td><code class="path">scripts/Stop-Mid.ps1</code></td><td>只停 rag/配置台；默认保留 Docker；不停巡检。</td></tr>
+        <tr><td><code class="path">infra/init-db.sql</code></td><td>RAG / pgvector 表结构（与 brain/scripts 同步）。</td></tr>
+        <tr><td><code class="path">scripts/Start-All.ps1</code></td><td>一键：建表 → RAG → Console → OpenClaw → cs-watch。</td></tr>
+        <tr><td><code class="path">scripts/Start-Mid.ps1</code></td><td>仅中台：建表 + rag-service(+配置台)；打印局域网 IP 给边端填 <code>RAG_BASE_URL</code>。</td></tr>
+        <tr><td><code class="path">scripts/Stop-Mid.ps1</code></td><td>只停 rag/配置台；不停巡检。</td></tr>
         <tr><td><code class="path">scripts/Start-CsWatch.ps1</code></td><td>确保浏览器/CDP 后启动巡检。</td></tr>
         <tr><td><code class="path">scripts/Stop-All.ps1</code></td><td>停相关进程，清 lock。</td></tr>
-        <tr><td><code class="path">scripts/Ensure-Infra.ps1</code></td><td>Docker pull/up + 建表。</td></tr>
+        <tr><td><code class="path">scripts/Ensure-Infra.ps1</code></td><td>对远程 <code>DATABASE_URL</code> 建表（无 Docker）。</td></tr>
+        <tr><td><code class="path">scripts/init-remote-db.js</code></td><td>对 Supabase 执行 <code>init-db.sql</code>（<code>npm run db:init</code>）。</td></tr>
         <tr><td><code class="path">scripts/run-next-console.js</code></td><td>启动 Next console（dev/build/start）。</td></tr>
         <tr><td><code class="path">scripts/kb-admin-server.js</code></td><td>静态 admin：cs-runtime、/api/env、/api/openclaw-llm、/api/chat-logs、上传转发。</td></tr>
       </tbody>

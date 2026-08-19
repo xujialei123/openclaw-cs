@@ -11,7 +11,7 @@ Electron 壳 + 业务目录 + **精简 OpenClaw 便携包** 打成 Windows 安�
 | 模式 | 命令 | 产物名 | 固化角色 | 适用 |
 |---|---|---|---|---|
 | 边端 | `npm run desktop:dist:edge` | `OpenClawDesktop-Setup-Edge-*.exe` | `DEPLOY_ROLE=edge` | 门店 / 坐席机，连公司中台 |
-| 全栈 | `npm run desktop:dist:full` | `OpenClawDesktop-Setup-Full-*.exe` | `DEPLOY_ROLE=all` | 单机试点（本机 Docker + 话术库） |
+| 全栈 | `npm run desktop:dist:full` | `OpenClawDesktop-Setup-Full-*.exe` | `DEPLOY_ROLE=all` | 单机试点（本机 rag + Supabase） |
 | 两种都打 | `npm run desktop:dist` | 上述两个 | — | 发版时一次打齐 |
 
 角色写进 `product-profile.json` + 安装目录 `.env`；首次引导**不再出现**「全栈 / 边端」选择。边端版需填公司 `RAG_BASE_URL`；全栈版默认本机 `8787`。
@@ -43,7 +43,7 @@ powershell -File scripts\Pack-Desktop.ps1 -Mode edge -SkipPortable
 ## 安装注意
 
 - 覆盖安装前请先**关闭窗口**（会自动停止接待）或托盘「退出」。
-- **边端包**首次会引导填写公司话术服务地址；**全栈包**一般可直接开始（需本机 Docker）。
+- **边端包**首次会引导填写公司话术服务地址；**全栈包**一般可直接开始（库走 `brain/.env` 的 Supabase）。
 - 若安装器提示「无法关闭」：0.2.3 及更早安装包名 `OpenClaw-CS-Setup-*` 会和 `OpenClaw-CS.exe` 子串误匹配。请改用 **0.2.4+** 的 `OpenClawDesktop-Setup-*.exe`；临时可取消安装 → 任务管理器结束 `OpenClaw-CS.exe` 与 `*Setup*` → 删旧目录后重装到短路径如 `F:\OpenClawCS`。
 
 ## 装机后
@@ -54,8 +54,7 @@ powershell -File scripts\Pack-Desktop.ps1 -Mode edge -SkipPortable
 3. 右侧设置白名单与话术  
 
 ### 全栈版
-1. 安装 Docker Desktop  
-2. 打开「智能客服（全栈）」→「开始接待」（会起本机中台）  
-3. 橙框浏览器登录；右侧上传话术  
+1. 打开「智能客服（全栈）」→「开始接待」（本机起 rag-service，库在 Supabase）  
+2. 橙框浏览器登录；右侧上传话术  
 
 关闭窗口会自动停止接待并退出；仅最小化可保持继续跑。

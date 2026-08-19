@@ -9,7 +9,7 @@ import { readFile, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
-import { env } from '../config/env.js';
+import { env, pgPoolOptions } from '../config/env.js';
 const currentDir = fileURLToPath(new URL('.', import.meta.url));
 const runtimeRoot = process.env.CUSTOMER_AI_ROOT
     ? resolve(process.env.CUSTOMER_AI_ROOT)
@@ -67,7 +67,7 @@ export class RagMemoryRepository {
 export const repository = new RagMemoryRepository();
 class KnowledgePersistence {
     enabled = env.VECTOR_STORE === 'pgvector' && Boolean(env.DATABASE_URL);
-    pool = this.enabled ? new pg.Pool({ connectionString: env.DATABASE_URL }) : null;
+    pool = this.enabled ? new pg.Pool(pgPoolOptions()) : null;
     /**
      * RAG 服务启动时主动建表并恢复元数据，避免 Docker 卷已存在时初始化脚本不再自动执行。
      * 内存 Map 继续作为运行时缓存，PostgreSQL 才是知识库和文件状态的持久化事实源。
@@ -75,16 +75,27 @@ class KnowledgePersistence {
     async initialize() {
         if (!this.pool)
             return;
-        const schemaPath = resolve(runtimeRoot, 'scripts/init-db.sql');
-        const schema = await readFile(schemaPath, 'utf-8');
         const client = await this.pool.connect();
         try {
-            // 多个 watcher 意外并发启动时串行执行 DDL，避免 IF NOT EXISTS 仍在系统表层发生竞态。
-            await client.query('SELECT pg_advisory_lock($1)', [84321001]);
-            await client.query(schema);
+            // 表已存在则跳过整份 DDL（避免每次启动重跑 ivfflat / advisory_lock，Supabase 上易超时）
+            const existed = await client.query(`SELECT to_regclass('public.rag_knowledge_bases') AS t`);
+            if (!existed.rows[0]?.t) {
+                const schemaPath = resolve(runtimeRoot, 'scripts/init-db.sql');
+                const schema = await readFile(schemaPath, 'utf-8');
+                for (const stmt of schema.split(';').map((s) => s.trim()).filter(Boolean)) {
+                    try {
+                        await client.query(stmt);
+                    }
+                    catch (e) {
+                        const msg = String(e?.message || e);
+                        if (/ivfflat|lists|already exists/i.test(msg))
+                            continue;
+                        throw e;
+                    }
+                }
+            }
         }
         finally {
-            await client.query('SELECT pg_advisory_unlock($1)', [84321001]).catch(() => undefined);
             client.release();
         }
         const [kbResult, fileResult] = await Promise.all([

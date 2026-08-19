@@ -6,7 +6,7 @@
  */
 import pg from 'pg';
 import { nanoid } from 'nanoid';
-import { env } from '../config/env.js';
+import { pgPoolOptions } from '../config/env.js';
 import type { KnowledgeCard, KnowledgeGap, KnowledgeGraphEdge, WikiPage } from './types.js';
 
 function arrayValue(value: unknown): string[] {
@@ -40,7 +40,7 @@ function mapCard(row: Record<string, any>): KnowledgeCard {
 }
 
 export class KnowledgeStore {
-  pool = new pg.Pool({ connectionString: env.DATABASE_URL });
+  pool = new pg.Pool(pgPoolOptions());
 
   async saveWikiPage(page: WikiPage): Promise<void> {
     await this.pool.query(`INSERT INTO rag_wiki_pages

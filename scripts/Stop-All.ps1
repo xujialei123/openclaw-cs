@@ -1,6 +1,5 @@
 #Requires -Version 5.1
 param(
-  [switch]$StopDocker,
   [switch]$StopBrowser,
   [switch]$KeepRag
 )
@@ -76,34 +75,16 @@ if (-not $KeepRag) {
   Write-Host "[3] rag-service: kept (-KeepRag)"
 }
 
-if ($StopDocker) {
-  Write-Host "[4] Docker containers"
-  $docker = Get-Command docker -ErrorAction SilentlyContinue
-  if ($docker) {
-    foreach ($name in @("customer-ai-postgres", "customer-ai-redis")) {
-      $old = $ErrorActionPreference
-      $ErrorActionPreference = "SilentlyContinue"
-      & docker stop $name 2>&1 | Out-Null
-      $ErrorActionPreference = $old
-      Write-Host "  docker stop $name"
-    }
-  } else {
-    Write-Warning "  docker not found; skip"
-  }
-} else {
-  Write-Host "[4] Docker: kept (use -StopDocker to stop postgres/redis)"
-}
-
-Write-Host "[5] OpenClaw gateway (best-effort)"
+Write-Host "[4] OpenClaw gateway (best-effort)"
 [void](Stop-ByCommandLine "*openclaw.mjs*gateway*" "openclaw-gateway")
 [void](Stop-ByCommandLine "*Start-OpenClaw.ps1*" "Start-OpenClaw")
 
 if ($StopBrowser) {
-  Write-Host "[6] OpenClaw browser (best-effort)"
+  Write-Host "[5] OpenClaw browser (best-effort)"
   [void](Stop-ByCommandLine "*openclaw.mjs*browser*" "openclaw-browser")
   Write-Warning "  Browser may still be open; close the orange window manually if needed."
 } else {
-  Write-Host "[6] OpenClaw browser: kept (use -StopBrowser to try closing)"
+  Write-Host "[5] OpenClaw browser: kept (use -StopBrowser to try closing)"
 }
 
 Write-Host ""

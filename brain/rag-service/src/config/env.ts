@@ -116,6 +116,21 @@ export const env = {
     OPENCLAW_TOKEN_FILE: openClawTokenFile,
     OPENCLAW_TOKEN: resolveOpenClawToken(openClawTokenFile)
 };
+
+/** Supabase / 云库需要 TLS；本机 Docker 5433 不用。直连 db.* 在国内常只有 IPv6，用 Session pooler。 */
+export function pgPoolOptions() {
+    const raw = String(env.DATABASE_URL || '').trim();
+    const connectionString = raw
+        .replace(/[?&]sslmode=[^&]*/gi, '')
+        .replace(/[?&]$/g, '')
+        .replace(/\?$/, '');
+    const remote = /supabase\.co|pooler\.supabase/i.test(raw)
+        || (Boolean(raw) && !/127\.0\.0\.1|localhost|::1/i.test(raw));
+    return {
+        connectionString,
+        ssl: remote ? { rejectUnauthorized: false } : undefined
+    };
+}
 export function safeEnvView() {
     return {
         ...env,
@@ -123,6 +138,7 @@ export function safeEnvView() {
         EMBEDDING_API_KEY: env.EMBEDDING_API_KEY ? '***' : '',
         LLM_API_KEY: env.LLM_API_KEY ? '***' : '',
         AGNES_API_KEY: env.AGNES_API_KEY ? '***' : '',
-        AGENES_API_KEY: env.AGENES_API_KEY ? '***' : ''
+        AGENES_API_KEY: env.AGENES_API_KEY ? '***' : '',
+        DATABASE_URL: env.DATABASE_URL ? '***' : ''
     };
 }

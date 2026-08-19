@@ -1,51 +1,41 @@
-# 依赖与构建产物
+# Dependencies
 node_modules/
-.next/
-apps/console/.next/
-apps/**/node_modules/
-packages/**/node_modules/
-brain/**/node_modules/
+brain/rag-service/node_modules/
 brain/rag-service/dist/
-brain/rag-service/release/
-dist-pack/
-*.tsbuildinfo
+brain/rag-service/src/
+apps/desktop/node_modules/
 
-# 密钥与本机环境（必须忽略）
+# Environment
 .env
-.env.local
-.env.*.local
-**/.env
 brain/.env
-!.env.example
-!brain/.env.example
-
-# 本地运行时配置（含白名单 / kbIds / 密钥，勿入库）
+brain/rag-service/.env
 config/cs-runtime.json
 
-# 运行时日志 / 锁 / 状态
+# Logs
+*.log
 memory/*.log
-memory/*.lock
-memory/cs-watch-state.json
-memory/*.json
 memory/*.jsonl
-!memory/.gitkeep
+memory/*.json
+memory/rag-service-*.log
+memory/cs-watch-*.log
 
-# 知识库本地缓存与上传（体积大且含业务内容）
-knowledge/index/embeddings.json
-knowledge/db/
-brain/rag-service/uploads/
+# IDE
+.vscode/
+.cursor/
+.agnes/
 
-# 临时探测脚本
-scripts/_probe-*.js
-scripts/scratch/
-scripts/Untitled
-
-# Electron 本地下载缓存 zip（体积大）
-memory/electron-*.zip
-
-# IDE / 系统
+# OS
 .DS_Store
 Thumbs.db
-.cursor/
-*.swp
-*.swo
+
+# Uploads (managed separately)
+brain/rag-service/uploads/
+
+# Archives
+*.zip
+*.tar.gz
+*.7z
+
+# Temporary
+*.tmp
+*.temp

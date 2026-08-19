@@ -8,10 +8,9 @@
 
 ## 目标机步骤
 
-1. 安装并启动 **Docker Desktop**
-2. 解压 zip，例如放到 `D:\openclawProject`
-3. 复制便携包，例如放到 `D:\OpenClaw-USB-Portable`
-4. 配置环境变量：
+1. 解压 zip，例如放到 `D:\openclawProject`
+2. 复制便携包，例如放到 `D:\OpenClaw-USB-Portable`
+3. 配置环境变量：
    - 复制 `.env.example` → `.env`
    - 复制 `brain\.env.example` → `brain\.env`
    - 编辑 `.env`，至少改：

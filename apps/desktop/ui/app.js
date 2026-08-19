@@ -96,7 +96,7 @@
       obSub.textContent =
         packageMeta.deployRole === "edge"
           ? "当前为边端版：本机只负责接待，请填写公司话术服务地址。"
-          : "当前为全栈版：话术库与接待都在本机（需 Docker）。";
+          : "当前为全栈版：本机跑话术服务，数据库在云端（Supabase），无需 Docker。";
     }
     if (obRagHint) {
       obRagHint.textContent =
@@ -120,7 +120,7 @@
   }
 
   function paintPills(status) {
-    const keys = ["portableOk", "dockerOk", "rag", "admin", "gateway", "cdp", "watch", "wecom"];
+    const keys = ["portableOk", "rag", "admin", "gateway", "cdp", "watch", "wecom"];
     for (const k of keys) {
       const el = document.querySelector(`.pill[data-k="${k}"]`);
       if (!el) continue;
@@ -178,7 +178,7 @@
       emptyHint.textContent =
         packageMeta.deployRole === "edge"
           ? "边端版：连接公司服务器，无需本机数据库。"
-          : "全栈版：话术库在本机，需安装 Docker。";
+          : "全栈版：本机跑话术服务，库在 Supabase。";
     }
   }
 

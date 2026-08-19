@@ -75,10 +75,11 @@ export async function apiRoutes(app) {
     const brain = new BrainSync();
     const knowledgeStore = new KnowledgeStore();
     const hybridRag = new HybridRagService();
-    await rag.bootstrapFromUploads();
-
-    // 存活探针：Docker / 启动脚本确认 8787 进程是否在线。
-    app.get('/health', async () => ({ ok: true, service: 'rag-service' }));
+    // 先挂路由再 bootstrap：连 Supabase 慢时也不堵死整个插件注册
+    // 存活探针已在 main.ts 注册；此处保留同路径兼容旧调用方。
+    if (!app.hasRoute({ method: 'GET', url: '/health' })) {
+        app.get('/health', async () => ({ ok: true, service: 'rag-service' }));
+    }
 
     // 热更新 Embedding（baseUrl/model/key）：由 /guide 模型配置页经 API 转发，免重启改向量模型。
     app.put('/admin/runtime-config', async (request, reply) => {
@@ -333,4 +334,12 @@ export async function apiRoutes(app) {
 
     // 调试：最近若干条检索日志，排查 Hybrid/Chunk 命中情况。
     app.get('/api/debug/logs/retrieval', async () => ({ logs: repository.retrievalLogs.slice(0, 50) }));
+
+    // 路由挂完后再加载库元数据；失败只打日志，不拖垮进程
+    try {
+        await rag.bootstrapFromUploads();
+    }
+    catch (e) {
+        app.log.error(e, 'bootstrapFromUploads failed (service still up; /health ok)');
+    }
 }

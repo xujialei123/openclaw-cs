@@ -29,6 +29,7 @@
     "console:build": "node scripts/run-next-console.js build",
     "console:start": "node scripts/run-next-console.js start",
     "admin:legacy": "node scripts/kb-admin-server.js",
+    "db:init": "node scripts/init-remote-db.js",
     "pack:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Pack-LocalDeploy.ps1",
     "pack:openclaw-clean": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Pack-OpenClaw-Clean.ps1"
   },

@@ -1,7 +1,7 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Start mid-platform only: Docker (Postgres/Redis) + rag-service (+ optional admin).
+  Start mid-platform only: apply DATABASE_URL schema + rag-service (+ optional admin).
   Other PCs connect with DEPLOY_ROLE=edge and RAG_BASE_URL=http://<this-LAN-IP>:8787.
 .EXAMPLE
   .\scripts\Start-Mid.ps1
@@ -99,6 +99,9 @@ if (-not (Test-Path (Join-Path $RagDir "dist\main.js")) -and $env:SKELETON_ROOT)
 
 Import-DotEnv (Join-Path $BrainRoot ".env")
 $env:CUSTOMER_AI_ROOT = $BrainRoot
+if ($SkipDocker) {
+  Write-Host "SkipDocker is obsolete (no Docker) — ignored"
+}
 
 $Node = Join-Path $PortableRoot "app\runtime\node-win-x64\node.exe"
 if (-not (Test-Path $Node)) {
@@ -123,20 +126,16 @@ Write-Host "Brain:  $BrainRoot"
 Write-Host "RagDir: $RagDir"
 Write-Host "Node:   $Node"
 Write-Host ""
-Write-Host "Starts: Docker + rag-service (+ optional admin). Does NOT start OpenClaw / cs-watch."
+Write-Host "Starts: schema (DATABASE_URL) + rag-service (+ optional admin). Does NOT start OpenClaw / cs-watch."
 Write-Host ""
 
 $EnsureInfra = Join-Path $Root "scripts\Ensure-Infra.ps1"
-if (-not $SkipDocker) {
-  Write-Host "[1/3] Docker + DB schema (infra/)..."
-  if (Test-Path $EnsureInfra) {
-    try { & $EnsureInfra -BrainRoot $BrainRoot }
-    catch { Write-Warning ("  Ensure-Infra failed: {0}" -f $_.Exception.Message) }
-  } else {
-    Write-Warning "  Ensure-Infra.ps1 missing"
-  }
+Write-Host "[1/3] DB schema (DATABASE_URL / Supabase)..."
+if (Test-Path $EnsureInfra) {
+  try { & $EnsureInfra -BrainRoot $BrainRoot }
+  catch { Write-Warning ("  Ensure-Infra failed: {0}" -f $_.Exception.Message) }
 } else {
-  Write-Host "[1/3] Skip Docker"
+  Write-Warning "  Ensure-Infra.ps1 missing"
 }
 
 function Start-RagService {
@@ -159,10 +158,11 @@ function Start-RagService {
     -WindowStyle Hidden `
     -RedirectStandardOutput $ragOut `
     -RedirectStandardError $ragErr | Out-Null
-  for ($i = 0; $i -lt 40; $i++) {
+  for ($i = 0; $i -lt 60; $i++) {
     if (Test-UrlOk "$ragListen/health" 2) { return $true }
     Start-Sleep -Seconds 1
   }
+  Write-Warning "  RAG health timeout. Check memory\rag-service-stderr.log"
   return $false
 }
 
@@ -235,5 +235,4 @@ if (-not $NoFirewallHint) {
 
 Write-Host ""
 Write-Host "Stop mid:  npm run stop:mid   or  .\scripts\Stop-Mid.ps1"
-Write-Host "(Docker kept by default; use -StopDocker to stop Postgres/Redis)"
 Write-Host ""

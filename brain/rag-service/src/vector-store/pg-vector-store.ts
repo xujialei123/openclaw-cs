@@ -6,9 +6,9 @@
  * @see 联动关注：向量维度与 HNSW 索引。
  */
 import pg from 'pg';
-import { env } from '../config/env.js';
+import { pgPoolOptions } from '../config/env.js';
 export class PgVectorStore {
-    pool = new pg.Pool({ connectionString: env.DATABASE_URL });
+    pool = new pg.Pool(pgPoolOptions());
     async upsertChunks(chunks) {
         // 向量写入必须与数据库 vector 维度一致；维度错误应直接失败，不能静默截断。
         for (const chunk of chunks) {

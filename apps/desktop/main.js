@@ -214,7 +214,6 @@ function emptyStatus() {
     watch: false,
     wecom: false,
     portableOk: false,
-    dockerOk: false,
     adminUrl: ADMIN_URL,
     ragUrl: `${RAG_BASE}/health`,
     gatewayUrl: GATEWAY_URL,
@@ -435,7 +434,6 @@ async function collectStatus() {
   statusCache = {
     ...flags,
     portableOk,
-    dockerOk: !!statusCache.dockerOk,
     adminUrl: ADMIN_URL,
     ragUrl: `${(setup.ragBaseUrl || RAG_BASE).replace(/\/$/, "")}/health`,
     gatewayUrl: GATEWAY_URL,
@@ -519,134 +517,6 @@ function runPowerShell(scriptPath, args = []) {
       resolve({ ok: code === 0, code, stdout, stderr });
     });
   });
-}
-
-function findDockerExe() {
-  const candidates = [
-    process.env.DOCKER_PATH,
-    "docker",
-    path.join(process.env.ProgramFiles || "C:\\Program Files", "Docker", "Docker", "resources", "bin", "docker.exe"),
-    path.join(process.env["ProgramFiles(x86)"] || "", "Docker", "Docker", "resources", "bin", "docker.exe"),
-    path.join(process.env.LOCALAPPDATA || "", "Docker", "resources", "bin", "docker.exe"),
-  ].filter(Boolean);
-  for (const c of candidates) {
-    if (c === "docker") continue;
-    if (fs.existsSync(c)) return c;
-  }
-  return "docker";
-}
-
-function findDockerDesktopExe() {
-  const candidates = [
-    path.join(process.env.ProgramFiles || "C:\\Program Files", "Docker", "Docker", "Docker Desktop.exe"),
-    path.join(process.env.LOCALAPPDATA || "", "Docker", "Docker Desktop.exe"),
-  ];
-  for (const c of candidates) {
-    if (c && fs.existsSync(c)) return c;
-  }
-  return "";
-}
-
-function dockerInstalled() {
-  if (findDockerDesktopExe()) return true;
-  const exe = findDockerExe();
-  if (exe !== "docker" && fs.existsSync(exe)) return true;
-  return false;
-}
-
-function dockerAvailable() {
-  return new Promise((resolve) => {
-    const exe = findDockerExe();
-    const child = spawn(exe, ["info"], { windowsHide: true });
-    let done = false;
-    const finish = (ok) => {
-      if (done) return;
-      done = true;
-      resolve(ok);
-    };
-    child.on("error", () => finish(false));
-    child.on("close", (code) => finish(code === 0));
-    setTimeout(() => {
-      try {
-        child.kill();
-      } catch {}
-      finish(false);
-    }, 4000);
-  });
-}
-
-async function ensureDockerReadyForStart() {
-  const installed = dockerInstalled();
-  let ready = await dockerAvailable();
-  statusCache.dockerOk = ready;
-
-  if (!installed && !ready) {
-    pushLog("未安装 Docker Desktop。\n", "err");
-    const choice = await dialog.showMessageBox({
-      type: "warning",
-      title: "未检测到 Docker",
-      message: "本机尚未安装 Docker Desktop",
-      detail:
-        "本地知识库（Postgres/Redis 拉镜像、建表）需要 Docker。\n\n" +
-        "可选：\n" +
-        "• 去官网安装后再点「启动全部」\n" +
-        "• 或继续启动（跳过 Docker，仅启 Gateway/浏览器/巡检/企微；知识库需远程中台）",
-      buttons: ["打开 Docker 下载页", "仍继续（跳过 Docker）", "取消"],
-      defaultId: 0,
-      cancelId: 2,
-    });
-    if (choice.response === 0) {
-      await shell.openExternal("https://www.docker.com/products/docker-desktop/");
-      return { ok: false, skipDocker: true, cancelled: true, reason: "请安装 Docker Desktop 后重试" };
-    }
-    if (choice.response === 2) {
-      return { ok: false, skipDocker: true, cancelled: true, reason: "已取消启动" };
-    }
-    pushLog("用户选择跳过 Docker，继续启动其它服务。\n", "err");
-    return { ok: true, skipDocker: true };
-  }
-
-  if (!ready) {
-    const desktop = findDockerDesktopExe();
-    if (desktop) {
-      pushLog("Docker 已安装但未就绪，正在启动 Docker Desktop…\n");
-      try {
-        spawn(desktop, [], { detached: true, stdio: "ignore", windowsHide: false }).unref();
-      } catch (e) {
-        pushLog(`启动 Docker Desktop 失败: ${e.message}\n`, "err");
-      }
-      for (let i = 0; i < 90; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        ready = await dockerAvailable();
-        if (ready) {
-          pushLog(`Docker 已就绪（约 ${(i + 1) * 2}s）。\n`);
-          break;
-        }
-        if (i % 5 === 4) pushLog(`等待 Docker 引擎… ${(i + 1) * 2}s\n`);
-      }
-    }
-  }
-
-  statusCache.dockerOk = ready;
-  if (!ready) {
-    pushLog("Docker 引擎仍未就绪。\n", "err");
-    const choice = await dialog.showMessageBox({
-      type: "warning",
-      title: "Docker 未就绪",
-      message: "无法连接 Docker 引擎",
-      detail: "请确认 Docker Desktop 已打开且引擎 Running，然后再试。也可暂时跳过 Docker 启动其它服务。",
-      buttons: ["仍继续（跳过 Docker）", "取消"],
-      defaultId: 1,
-      cancelId: 1,
-    });
-    if (choice.response !== 0) {
-      return { ok: false, skipDocker: true, cancelled: true, reason: "Docker 未就绪，已取消" };
-    }
-    return { ok: true, skipDocker: true };
-  }
-
-  pushLog("Docker 就绪：将执行拉镜像 / compose up / 建表（与本地 Start-All 相同）。\n");
-  return { ok: true, skipDocker: false };
 }
 
 async function ensurePortableConfigured() {
@@ -867,19 +737,8 @@ async function ipcStartAll() {
   pushLog("======== 启动全部服务 ========\n");
   await collectStatus();
   try {
-    const dockerPlan = await ensureDockerReadyForStart();
-    if (dockerPlan.cancelled) {
-      lastError = dockerPlan.reason || "已取消";
-      pushLog(`${lastError}\n`, "err");
-      return { ok: false, error: lastError };
-    }
     const args = ["-NoOpenBrowser"];
-    if (dockerPlan.skipDocker) {
-      args.push("-SkipDocker");
-      pushLog("本轮参数：-NoOpenBrowser -SkipDocker\n");
-    } else {
-      pushLog("本轮参数：-NoOpenBrowser（含 Ensure-Infra 拉镜像建表）\n");
-    }
+    pushLog("本轮参数：-NoOpenBrowser（库走 DATABASE_URL / Supabase，无 Docker）\n");
     const r = await runPowerShell(START_ALL, args);
     if (!r.ok) {
       lastError = (r.stderr || r.stdout || `退出码 ${r.code}`).slice(0, 400);
@@ -890,7 +749,7 @@ async function ipcStartAll() {
       const s = await collectStatus();
       if (i % 5 === 0) {
         pushLog(
-          `状态 ${i}s: admin=${s.admin} gateway=${s.gateway} cdp=${s.cdp} rag=${s.rag} watch=${s.watch} wecom=${s.wecom} docker=${s.dockerOk}\n`
+          `状态 ${i}s: admin=${s.admin} gateway=${s.gateway} cdp=${s.cdp} rag=${s.rag} watch=${s.watch} wecom=${s.wecom}\n`
         );
       }
       if (s.admin && s.gateway) break;

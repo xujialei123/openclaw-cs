@@ -8,10 +8,10 @@
 本工作区用于 **美团经营宝**、**抖音来客** 的客服自动化验证与后续运营扩展。  
 **当前优先**：把客服线走通（见 `tasks.md` §P），但**按最终交付形态演进**——中台可远程、边端可零库、库不绑坐席机（`docs/deploy.md`）。禁止「功能全做完再一次性部署」导致硬切翻车。  
 **扩展口子**：多店配置 / 平台 Adapter / 能力域（im·product·deal·shop·**order**）必须留好（`tasks.md` §7），含打开**自有系统查单**；代运营写操作与查单实现见 §8，客服通后再做。  
-**最终交付**：中台（Postgres/pgvector + rag-service）**独立部署**；边端多机只连远程中台（`tasks.md` §9，形态项与 §P 并行）。配置与代码按此预留，禁止写死「只能本机 5433」。  
+**最终交付**：中台（**Supabase** + rag-service）可部署到任意 Node 服务器；边端多机只连 `RAG_BASE_URL`（`tasks.md` §9）。禁止写死本机库 / Docker。  
 禁止把新平台 DOM 或政策话术继续堆死在单个巡检脚本里。
 
-当前阶段：OpenClaw 浏览器自动巡检 + **可配置白名单**；话术最终以 **知识中台** 为准。本机 Docker 仅作中台替身。
+当前阶段：OpenClaw 浏览器自动巡检 + **可配置白名单**；话术最终以 **知识中台** 为准。库用 Supabase，**不需要 Docker / Redis**。
 ---
 
 ## 身份与目标
@@ -35,7 +35,7 @@
 5. 主会话才加载 `MEMORY.md`
 
 启动后人类入口：`Start-All` 会打开 http://127.0.0.1:18790/guide ；研发梳理页：`/dev-flow`；**项目全景（目录/文件职责）**：`/project-map`。  
-本机只当中台给别的电脑连：`npm run start:mid`（Docker + rag-service，打印局域网 IP）。
+本机只当中台给别的电脑连：`npm run start:mid`（rag-service，库可用 Supabase；打印局域网 IP）。
 
 ---
 
@@ -71,12 +71,12 @@
 
 ### 知识库（企业主路径 = 中台 + 边端）
 
-**架构**：本仓 `brain/`（rag-service + `.env`）+ `infra/`（Postgres/Redis）= 知识中台；本仓 OpenClaw 巡检 = 通道边端。  
+**架构**：本仓 `brain/`（rag-service + `.env` + **Supabase**）= 知识中台；本仓 OpenClaw 巡检 = 通道边端。  
 不再依赖外部「插件」或默认去别的盘找服务；`SKELETON_ROOT` 仅作缺失时的遗留回退。
 
 | 层 | 职责 |
 |---|---|
-| 知识中台 | `brain/rag-service`、`infra/docker-compose`、pgvector、`/api/rag/retrieve` |
+| 知识中台 | `brain/rag-service`、Supabase pgvector、`/api/rag/retrieve` |
 | 边端控制台 | `apps/console` → `http://127.0.0.1:18790/`（配置）；知识库上传暂用 legacy admin |
 | 巡检 | `apps/edge-worker/cs-watch.js`：`knowledge.mode=remote` |
 

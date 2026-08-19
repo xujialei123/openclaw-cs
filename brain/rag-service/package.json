@@ -14,12 +14,11 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "@customer-ai/shared": "workspace:*",
     "@fastify/cors": "^10.0.1",
     "@fastify/multipart": "^9.0.3",
     "dotenv": "^16.4.7",
     "fastify": "^5.1.0",
-    "mammoth": "^1.12.0",
+    "mammoth": "^1.8.0",
     "nanoid": "^5.0.9",
     "pdf-parse": "^2.4.5",
     "pg": "^8.13.1",
@@ -33,7 +32,5 @@
     "typescript": "^5.6.3"
   },
   "_fileDescription": "8787 RAG 服务依赖、构建和测试命令。",
-  "_fileModule": "RAG Service 兼容层",
-  "_relatedModules": "pnpm-lock.yaml 和根 build:rag。",
   "description": "8787 RAG 服务依赖、构建和测试命令。"
 }
