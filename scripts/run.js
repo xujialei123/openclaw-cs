@@ -35,7 +35,7 @@ const scriptMap = {
     'start:mid': 'start-mid',
     stop: 'Stop-All',
     'stop:all': 'Stop-All',
-    'stop:mid': 'Stop-Mid',
+    'stop:mid': 'stop-mid',
     edge: 'cs-watch',
     wecom: 'index',
 }
