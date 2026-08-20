@@ -134,7 +134,7 @@ export class KnowledgeStore {
         AND ($3::text IS NULL OR shop_id IS NULL OR shop_id=$3)
         AND ($4::text IS NULL OR category=$4 OR category='other')
       ORDER BY embedding <=> $1::vector LIMIT $5`, [vector, filters.platform ?? null, filters.shopId ?? null, filters.category ?? null, filters.limit]);
-    return result.rows.map((row) => ({ card: mapCard(row), score: Number(row.vector_score ?? 0) }));
+    return result.rows.map((row: any) => ({ card: mapCard(row), score: Number(row.vector_score ?? 0) }));
   }
 
   async saveEdges(edges: KnowledgeGraphEdge[]): Promise<void> {
@@ -149,7 +149,7 @@ export class KnowledgeStore {
       return [];
     const result = await this.pool.query(`SELECT DISTINCT to_id FROM rag_knowledge_graph_edges
       WHERE from_id=ANY($1::text[]) LIMIT $2`, [cardIds, limit]);
-    return result.rows.map((row) => row.to_id);
+    return result.rows.map((row: any) => row.to_id);
   }
 
   async recordGap(gap: Omit<KnowledgeGap, 'id' | 'count' | 'createdAt' | 'updatedAt'>): Promise<void> {
